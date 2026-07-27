@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#111318" />
+  <title>Project Eclipse 2D</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="game-shell">
+    <header class="hud">
+      <div class="brand">
+        <strong>PROJECT ECLIPSE</strong>
+        <span>Prototipo 2D</span>
+      </div>
+
+      <div class="bars">
+        <div class="bar-row">
+          <span>Vita</span>
+          <div class="bar"><div id="healthBar" class="fill health"></div></div>
+        </div>
+        <div class="bar-row">
+          <span>Stamina</span>
+          <div class="bar"><div id="staminaBar" class="fill stamina"></div></div>
+        </div>
+      </div>
+
+      <div class="room-info">
+        <span>Stanza <strong id="roomNumber">1</strong></span>
+        <span>Frammenti <strong id="souls">0</strong></span>
+      </div>
+    </header>
+
+    <section class="canvas-wrap">
+      <canvas id="gameCanvas" width="960" height="540" aria-label="Project Eclipse 2D"></canvas>
+
+      <div id="startScreen" class="overlay visible">
+        <div class="panel">
+          <p class="eyebrow">L'ULTIMO GIURATO</p>
+          <h1>Project Eclipse</h1>
+          <p>
+            Sconfiggi i Cavalieri Vuoti, raccogli Frammenti d'Anima
+            e attraversa le Terre del Ferro Piangente.
+          </p>
+          <button id="startButton">Inizia la run</button>
+          <small>WASD/Frecce: movimento · Spazio: attacco · Shift: schivata</small>
+        </div>
+      </div>
+
+      <div id="upgradeScreen" class="overlay">
+        <div class="panel">
+          <p class="eyebrow">RICOMPENSA</p>
+          <h2>Scegli un potenziamento</h2>
+          <div class="upgrade-grid">
+            <button class="upgrade" data-upgrade="health">
+              <strong>Cuore d'Acciaio</strong>
+              <span>+25 vita massima e cura completa</span>
+            </button>
+            <button class="upgrade" data-upgrade="damage">
+              <strong>Lama del Giuramento</strong>
+              <span>+5 danni permanenti nella run</span>
+            </button>
+            <button class="upgrade" data-upgrade="stamina">
+              <strong>Respiro dell'Infranto</strong>
+              <span>+25 stamina massima</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="gameOverScreen" class="overlay">
+        <div class="panel">
+          <p class="eyebrow danger">LA RUN È TERMINATA</p>
+          <h2>L'Infranto è caduto</h2>
+          <p>Le Terre del Ferro Piangente ricorderanno la tua morte.</p>
+          <button id="restartButton">Ricomincia</button>
+        </div>
+      </div>
+
+      <div class="mobile-controls" aria-label="Comandi touch">
+        <div class="dpad">
+          <button data-key="ArrowUp">▲</button>
+          <div>
+            <button data-key="ArrowLeft">◀</button>
+            <button data-key="ArrowDown">▼</button>
+            <button data-key="ArrowRight">▶</button>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="dodge-btn" data-key="ShiftLeft">Schivata</button>
+          <button class="attack-btn" data-key="Space">Attacco</button>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Prototipo originale browser · Nessun asset esterno richiesto
+    </footer>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
