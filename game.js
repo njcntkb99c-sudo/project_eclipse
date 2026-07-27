@@ -1,7 +1,7 @@
 const C=document.getElementById("gameCanvas"),X=C.getContext("2d"),$=id=>document.getElementById(id);
-const ui={healthBar:$("healthBar"),staminaBar:$("staminaBar"),xpBar:$("xpBar"),healthText:$("healthText"),staminaText:$("staminaText"),levelText:$("levelText"),roomNumber:$("roomNumber"),coins:$("coins"),souls:$("souls"),kills:$("kills"),relicCount:$("relicCount"),potionCount:$("potionCount"),skillStatus:$("skillStatus"),curseStatus:$("curseStatus"),biomeName:$("biomeName"),comboDisplay:$("comboDisplay"),comboValue:$("comboValue"),minimap:$("minimap"),toast:$("toast"),menu:$("mainMenu"),settings:$("settingsScreen"),codex:$("codexScreen"),codexGrid:$("codexGrid"),reward:$("rewardScreen"),shop:$("shopScreen"),level:$("levelScreen"),pause:$("pauseScreen"),over:$("gameOverScreen"),rewardGrid:$("rewardGrid"),shopGrid:$("shopGrid"),levelGrid:$("levelGrid"),shopCoins:$("shopCoins"),summary:$("runSummary"),continueButton:$("continueButton"),bestRoom:$("bestRoom"),bestScore:$("bestScore"),volume:$("volumeSlider"),effects:$("effectsToggle"),difficulty:$("difficultySelect")};
+const ui={healthBar:$("healthBar"),staminaBar:$("staminaBar"),xpBar:$("xpBar"),healthText:$("healthText"),staminaText:$("staminaText"),levelText:$("levelText"),roomNumber:$("roomNumber"),coins:$("coins"),souls:$("souls"),kills:$("kills"),relicCount:$("relicCount"),potionCount:$("potionCount"),skillStatus:$("skillStatus"),curseStatus:$("curseStatus"),biomeName:$("biomeName"),essence:$("essence"),missionsDone:$("missionsDone"),comboDisplay:$("comboDisplay"),comboValue:$("comboValue"),questTracker:$("questTracker"),questName:$("questName"),questProgress:$("questProgress"),bossBanner:$("bossBanner"),bossName:$("bossName"),minimap:$("minimap"),toast:$("toast"),menu:$("mainMenu"),settings:$("settingsScreen"),story:$("storyScreen"),storyTitle:$("storyTitle"),storyText:$("storyText"),legacy:$("legacyScreen"),legacyGrid:$("legacyGrid"),legacyEssence:$("legacyEssence"),missionComplete:$("missionCompleteScreen"),missionCompleteTitle:$("missionCompleteTitle"),missionCompleteText:$("missionCompleteText"),codex:$("codexScreen"),codexGrid:$("codexGrid"),reward:$("rewardScreen"),shop:$("shopScreen"),level:$("levelScreen"),pause:$("pauseScreen"),over:$("gameOverScreen"),rewardGrid:$("rewardGrid"),shopGrid:$("shopGrid"),levelGrid:$("levelGrid"),shopCoins:$("shopCoins"),summary:$("runSummary"),continueButton:$("continueButton"),bestRoom:$("bestRoom"),bestScore:$("bestScore"),volume:$("volumeSlider"),effects:$("effectsToggle"),difficulty:$("difficultySelect")};
 const keys=new Set(),A={x:54,y:54,w:C.width-108,h:C.height-108};
-let state="menu",room=1,coins=0,souls=0,kills=0,potions=1,relics=[],enemies=[],shots=[],drops=[],particles=[],obstacles=[],last=0,shake=0,toastTimer,shopBought=new Set(),settings=loadSettings(),combo=0,comboTimer=0,curse=null,biome="crypt";
+let state="menu",room=1,coins=0,souls=0,kills=0,potions=1,relics=[],enemies=[],shots=[],drops=[],particles=[],obstacles=[],last=0,shake=0,toastTimer,shopBought=new Set(),settings=loadSettings(),combo=0,comboTimer=0,curse=null,biome="crypt",quest=null,missionsDone=0,storyIndex=0,pendingMissionReward=null;
 const P={x:480,y:270,r:15,speed:205,maxHp:120,hp:120,maxSt:100,st:100,dmg:22,atkCd:0,dodgeCd:0,inv:0,dodge:0,fx:1,fy:0,crit:.08,lifeSteal:0,armor:0,level:1,xp:0,nextXp:35,skillCd:0,comboBonus:0};
 const RELICS=[
 {id:"steel",name:"Cuore d'Acciaio",desc:"+30 vita massima e cura completa.",apply(){P.maxHp+=30;P.hp=P.maxHp}},
@@ -31,6 +31,100 @@ function discovered(){try{return JSON.parse(localStorage.getItem("eclipseCodex")
 function discover(id){let d=discovered();if(!d.includes(id)){d.push(id);localStorage.setItem("eclipseCodex",JSON.stringify(d))}}
 function openCodex(){let d=discovered();ui.codexGrid.innerHTML="";RELICS.forEach(r=>{let b=document.createElement("div"),ok=d.includes(r.id);b.className="reward-card "+(ok?"":"codex-locked");b.innerHTML=`<strong>${ok?r.name:"Reliquia sconosciuta"}</strong><span>${ok?r.desc:"Trovala durante una run per sbloccarla."}</span>`;ui.codexGrid.appendChild(b)});ui.menu.classList.remove("visible");ui.codex.classList.add("visible")}
 
+
+const STORY=[
+ {title:"Prologo",text:"Il regno di Asterra era protetto da un unico giuramento: nessun sovrano avrebbe mai anteposto il proprio sangue al destino del popolo.\n\nTu eri il suo custode."},
+ {title:"La Caduta",text:"Quando la persona che amavi fu condannata dall’Eclissi, spezzasti il patto. Apristi il Sigillo Nero e condannasti il regno che avevi promesso di proteggere."},
+ {title:"Il Debito",text:"Ora Asterra è una terra frammentata. Le anime dei caduti vagano tra cripte, foreste e rovine.\n\nPer riscattarti dovrai raccogliere i frammenti del Giuramento e affrontare ciò che hai liberato."}
+];
+
+const QUESTS=[
+ {id:"slayer",name:"Cacciatore degli Infranti",target:8,type:"kills",reward:"coins",amount:28},
+ {id:"collector",name:"Anime Senza Pace",target:18,type:"souls",reward:"essence",amount:3},
+ {id:"combo",name:"Danza della Lama",target:7,type:"combo",reward:"potion",amount:1},
+ {id:"survivor",name:"Senza Ferite",target:2,type:"rooms",reward:"heal",amount:45}
+];
+
+const LEGACY=[
+ {id:"vitality",name:"Sangue del Giurato",desc:"+8 vita massima iniziale per grado.",base:5,max:5},
+ {id:"strength",name:"Ferro Antico",desc:"+2 danni iniziali per grado.",base:7,max:5},
+ {id:"fortune",name:"Occhio del Mercante",desc:"+5 monete iniziali per grado.",base:8,max:4},
+ {id:"memory",name:"Memoria delle Anime",desc:"+3% esperienza ottenuta per grado.",base:9,max:5}
+];
+
+const BOSS_NAMES={
+ crypt:"Custode dell’Eclissi",
+ forest:"Cervo del Sepolcro",
+ ruins:"Re Senza Corona",
+ abyss:"Araldo del Vuoto"
+};
+
+function loadMeta(){try{return Object.assign({essence:0,legacy:{}},JSON.parse(localStorage.getItem("eclipseMeta")||"{}"))}catch{return{essence:0,legacy:{}}}}
+function saveMeta(meta){localStorage.setItem("eclipseMeta",JSON.stringify(meta))}
+function legacyRank(id){return loadMeta().legacy[id]||0}
+function applyLegacy(){
+ const meta=loadMeta();
+ P.maxHp+=legacyRank("vitality")*8; P.hp=P.maxHp;
+ P.dmg+=legacyRank("strength")*2;
+ coins+=legacyRank("fortune")*5;
+ P.xpMult=1+legacyRank("memory")*.03;
+}
+function openLegacy(){
+ const meta=loadMeta(); ui.legacyEssence.textContent=meta.essence; ui.legacyGrid.innerHTML="";
+ LEGACY.forEach(l=>{
+   const rank=meta.legacy[l.id]||0, cost=l.base+rank*4, maxed=rank>=l.max;
+   const b=document.createElement("button");
+   b.className="reward-card legacy-card"+(maxed?" maxed":"");
+   b.innerHTML=`<span class="rank">Grado ${rank}/${l.max}</span><strong>${l.name}</strong><span>${l.desc}</span><em>${maxed?"Completato":cost+" Essenza"}</em>`;
+   b.onclick=()=>{const m=loadMeta(),r=m.legacy[l.id]||0,c=l.base+r*4;if(r>=l.max||m.essence<c)return;m.essence-=c;m.legacy[l.id]=r+1;saveMeta(m);openLegacy();record();beep(420,.1)};
+   ui.legacyGrid.appendChild(b);
+ });
+ ui.menu.classList.remove("visible");ui.legacy.classList.add("visible");
+}
+function startStory(fromMenu=true){storyIndex=0;showStoryPage();if(fromMenu)ui.menu.classList.remove("visible");ui.story.classList.add("visible")}
+function showStoryPage(){const page=STORY[storyIndex];ui.storyTitle.textContent=page.title;ui.storyText.textContent=page.text;$("storyNextButton").textContent=storyIndex===STORY.length-1?"INIZIA LA RUN":"CONTINUA"}
+function nextStory(){if(storyIndex<STORY.length-1){storyIndex++;showStoryPage()}else{localStorage.setItem("eclipseStorySeen","1");ui.story.classList.remove("visible");newRun(true)}}
+function createQuest(){
+ const q=QUESTS[Math.floor(Math.random()*QUESTS.length)];
+ quest={...q,startKills:kills,startSouls:souls,startRoom:room,progress:0,complete:false};
+}
+function questValue(){
+ if(!quest)return 0;
+ if(quest.type==="kills")return kills-quest.startKills;
+ if(quest.type==="souls")return Math.floor(souls-quest.startSouls);
+ if(quest.type==="combo")return combo;
+ if(quest.type==="rooms")return room-quest.startRoom;
+ return 0;
+}
+function updateQuest(){
+ if(!quest||quest.complete)return;
+ quest.progress=Math.max(0,questValue());
+ if(quest.progress>=quest.target){
+   quest.complete=true;pendingMissionReward=quest;
+   ui.questTracker.classList.add("complete");
+   setTimeout(()=>{if(state==="play"||state==="transition"){state="mission";ui.missionCompleteTitle.textContent=quest.name;ui.missionCompleteText.textContent=missionRewardText(quest);ui.missionComplete.classList.add("visible")}},250);
+ }
+}
+function missionRewardText(q){
+ if(q.reward==="coins")return `Ricompensa: ${q.amount} monete`;
+ if(q.reward==="essence")return `Ricompensa permanente: ${q.amount} Essenza`;
+ if(q.reward==="potion")return `Ricompensa: ${q.amount} pozione`;
+ return `Ricompensa: recuperi ${q.amount} vita`;
+}
+function claimMission(){
+ const q=pendingMissionReward;if(!q)return;
+ if(q.reward==="coins")coins+=q.amount;
+ if(q.reward==="essence"){const m=loadMeta();m.essence+=q.amount;saveMeta(m)}
+ if(q.reward==="potion")potions+=q.amount;
+ if(q.reward==="heal")P.hp=Math.min(P.maxHp,P.hp+q.amount);
+ missionsDone++;pendingMissionReward=null;ui.missionComplete.classList.remove("visible");ui.questTracker.classList.remove("complete");createQuest();state="play";hud();saveRun();beep(510,.12)
+}
+function showBossBanner(){
+ ui.bossName.textContent=BOSS_NAMES[biome]||"Custode dell’Eclissi";
+ ui.bossBanner.classList.add("show");
+ setTimeout(()=>ui.bossBanner.classList.remove("show"),2200);
+}
+
 const SHOP=[
 {id:"potion",name:"Pozione Cremisi",desc:"Ottieni una pozione.",cost:18,buy(){potions++}},
 {id:"heal",name:"Riposo del Giurato",desc:"Recupera 55 vita.",cost:14,buy(){P.hp=Math.min(P.maxHp,P.hp+55)}},
@@ -42,13 +136,13 @@ function saveSettings(){settings={volume:+ui.volume.value,effects:ui.effects.che
 function applySettings(){ui.volume.value=settings.volume;ui.effects.checked=settings.effects;ui.difficulty.value=settings.difficulty}
 function record(){let r=JSON.parse(localStorage.getItem("eclipseRecord")||'{"room":0,"score":0}');ui.bestRoom.textContent=r.room;ui.bestScore.textContent=r.score;ui.continueButton.disabled=!localStorage.getItem("eclipseSave");ui.continueButton.style.opacity=ui.continueButton.disabled?".45":"1"}
 function score(){return room*100+kills*15+souls*4+relics.length*75}
-function saveRun(){localStorage.setItem("eclipseSave",JSON.stringify({room,coins,souls,kills,potions,relics,player:P,settings,curse,biome,combo}))}
-function loadRun(){let s;try{s=JSON.parse(localStorage.getItem("eclipseSave"))}catch{}if(!s)return;room=s.room;coins=s.coins;souls=s.souls;kills=s.kills;potions=s.potions;relics=s.relics||[];curse=s.curse||null;biome=s.biome||"crypt";combo=s.combo||0;Object.assign(P,s.player);hide();spawn();state="play";hud();note("Run caricata")}
+function saveRun(){localStorage.setItem("eclipseSave",JSON.stringify({room,coins,souls,kills,potions,relics,player:P,settings,curse,biome,combo,quest,missionsDone}))}
+function loadRun(){let s;try{s=JSON.parse(localStorage.getItem("eclipseSave"))}catch{}if(!s)return;room=s.room;coins=s.coins;souls=s.souls;kills=s.kills;potions=s.potions;relics=s.relics||[];curse=s.curse||null;biome=s.biome||"crypt";combo=s.combo||0;quest=s.quest||null;missionsDone=s.missionsDone||0;Object.assign(P,s.player);if(!quest)createQuest();hide();spawn();state="play";hud();note("Run caricata")}
 function clearSave(){localStorage.removeItem("eclipseSave")}
-function reset(){room=1;coins=0;souls=0;kills=0;potions=1;relics=[];combo=0;comboTimer=0;curse=null;biome="crypt";Object.assign(P,{x:480,y:270,speed:205,maxHp:120,hp:120,maxSt:100,st:100,dmg:22,atkCd:0,dodgeCd:0,inv:0,dodge:0,fx:1,fy:0,crit:.08,lifeSteal:0,armor:0,level:1,xp:0,nextXp:35,skillCd:0,skillRate:1,comboBonus:0});spawn();hud()}
-function newRun(){clearSave();reset();hide();state="play";beep(220,.08)}
-function hide(){[ui.menu,ui.settings,ui.codex,ui.reward,ui.shop,ui.level,ui.pause,ui.over].forEach(e=>e.classList.remove("visible"))}
-function spawn(){enemies=[];shots=[];drops=[];shopBought.clear();chooseBiome();generateRoom();P.x=480;P.y=270;let boss=room%5===0;if(boss){enemies.push(makeEnemy("boss",480,145));note("Il Custode dell'Eclissi è apparso");return}let n=Math.min(2+Math.floor(room*.72),9);for(let i=0;i<n;i++){let p=randomFree(170),roll=Math.random(),t=roll<.18?"mage":roll<.48?"archer":"knight";enemies.push(makeEnemy(t,p.x,p.y))}}
+function reset(){room=1;coins=0;souls=0;kills=0;potions=1;relics=[];combo=0;comboTimer=0;curse=null;biome="crypt";quest=null;missionsDone=0;Object.assign(P,{x:480,y:270,speed:205,maxHp:120,hp:120,maxSt:100,st:100,dmg:22,atkCd:0,dodgeCd:0,inv:0,dodge:0,fx:1,fy:0,crit:.08,lifeSteal:0,armor:0,level:1,xp:0,nextXp:35,skillCd:0,skillRate:1,comboBonus:0,xpMult:1});applyLegacy();createQuest();spawn();hud()}
+function newRun(skipStory=false){if(!skipStory&&!localStorage.getItem("eclipseStorySeen")){startStory(false);return}clearSave();reset();hide();state="play";beep(220,.08)}
+function hide(){[ui.menu,ui.settings,ui.story,ui.legacy,ui.missionComplete,ui.codex,ui.reward,ui.shop,ui.level,ui.pause,ui.over].forEach(e=>e.classList.remove("visible"))}
+function spawn(){enemies=[];shots=[];drops=[];shopBought.clear();chooseBiome();generateRoom();P.x=480;P.y=270;let boss=room%5===0;if(boss){enemies.push(makeEnemy("boss",480,145));showBossBanner();note((BOSS_NAMES[biome]||"Il Custode")+" è apparso");return}let n=Math.min(2+Math.floor(room*.72),9);for(let i=0;i<n;i++){let p=randomFree(170),roll=Math.random(),t=roll<.18?"mage":roll<.48?"archer":"knight";enemies.push(makeEnemy(t,p.x,p.y))}}
 function generateRoom(){obstacles=[];let count=2+Math.floor(Math.random()*4);for(let i=0;i<count;i++){for(let tries=0;tries<30;tries++){let w=45+Math.floor(Math.random()*70),h=35+Math.floor(Math.random()*65),x=A.x+70+Math.random()*(A.w-w-140),y=A.y+70+Math.random()*(A.h-h-140),o={x,y,w,h};if(Math.hypot(x+w/2-480,y+h/2-270)>130&&!obstacles.some(q=>rectHit(o,q,25))){obstacles.push(o);break}}}}
 function rectHit(a,b,p=0){return a.x-p<b.x+b.w&&a.x+a.w+p>b.x&&a.y-p<b.y+b.h&&a.y+a.h+p>b.y}
 function randomFree(minPlayer=0){for(let i=0;i<100;i++){let x=A.x+35+Math.random()*(A.w-70),y=A.y+35+Math.random()*(A.h-70);if(Math.hypot(x-480,y-270)>=minPlayer&&!obstacles.some(o=>circleRect(x,y,25,o)))return{x,y}}return{x:120,y:120}}
@@ -64,10 +158,10 @@ enemies=enemies.filter(e=>e.hp>0);
 for(const s of shots){s.x+=s.vx*s.speed*dt;s.y+=s.vy*s.speed*dt;s.life-=dt;if(obstacles.some(o=>circleRect(s.x,s.y,s.r,o)))s.life=0;if(s.owner==="enemy"&&s.life>0&&Math.hypot(s.x-P.x,s.y-P.y)<P.r+s.r&&P.inv<=0){hurt(Math.max(1,s.dmg-P.armor));s.life=0}}shots=shots.filter(s=>s.life>0&&s.x>A.x&&s.x<A.x+A.w&&s.y>A.y&&s.y<A.y+A.h);
 for(const d of drops){d.life-=dt;if(Math.hypot(d.x-P.x,d.y-P.y)<24){d.type==="coin"?coins+=d.value:souls+=d.value;d.life=0}}drops=drops.filter(d=>d.life>0);
 particles.forEach(p=>{p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt});particles=particles.filter(p=>p.life>0);
-if(enemies.length===0){state="transition";saveRun();setTimeout(afterRoom,320)}hud()}
+updateQuest();if(enemies.length===0){state="transition";saveRun();setTimeout(afterRoom,320)}hud()}
 function attack(){if(state!=="play"||P.atkCd>0||P.st<15)return;P.atkCd=.31;P.st-=15;let ax=P.x+P.fx*42,ay=P.y+P.fy*42;burst(ax,ay,"#e3c47b",8);beep(155,.035);let hit=false;for(const e of enemies){if(Math.hypot(e.x-ax,e.y-ay)<61+e.r){let crit=Math.random()<P.crit,damage=P.dmg*(1+Math.min(combo,12)*.035)*(crit?2:1);e.hp-=damage;e.flash=.12;P.hp=Math.min(P.maxHp,P.hp+damage*P.lifeSteal);burst(e.x,e.y,crit?"#fff0a8":"#c44553",crit?14:8);hit=true;combo++;comboTimer=2.2;if(e.hp<=0)killEnemy(e)}}if(hit&&settings.effects)shake=5}
 function skill(){if(state!=="play"||P.skillCd>0)return;P.skillCd=8;P.inv=.55;beep(90,.15);burst(P.x,P.y,"#7ab9e2",28);for(const e of enemies){let d=Math.hypot(e.x-P.x,e.y-P.y);if(d<155){e.hp-=P.dmg*1.35;e.flash=.18;e.x+=(e.x-P.x)*.16;e.y+=(e.y-P.y)*.16;if(e.hp<=0)killEnemy(e)}}if(settings.effects)shake=11}
-function killEnemy(e){kills++;let gain=e.type==="boss"?28:8;P.xp+=gain;coins+=(e.type==="boss"?40:4+Math.floor(Math.random()*5))*(curse==="chains"?1.25:1);souls+=(e.type==="boss"?24:3)*(curse==="hunger"?1.4:1);for(let i=0;i<(e.type==="boss"?10:2);i++)drops.push({x:e.x+(Math.random()-.5)*25,y:e.y+(Math.random()-.5)*25,type:i%2?"coin":"soul",value:1,life:6});checkLevel()}
+function killEnemy(e){kills++;let gain=e.type==="boss"?28:8;P.xp+=gain*(P.xpMult||1);coins+=(e.type==="boss"?40:4+Math.floor(Math.random()*5))*(curse==="chains"?1.25:1);souls+=(e.type==="boss"?24:3)*(curse==="hunger"?1.4:1);for(let i=0;i<(e.type==="boss"?10:2);i++)drops.push({x:e.x+(Math.random()-.5)*25,y:e.y+(Math.random()-.5)*25,type:i%2?"coin":"soul",value:1,life:6});checkLevel()}
 function checkLevel(){if(P.xp>=P.nextXp){P.xp-=P.nextXp;P.level++;P.nextXp=Math.floor(P.nextXp*1.38);state="level";openLevel()}}
 function openLevel(){ui.levelGrid.innerHTML="";let opts=[["Vigore","+20 vita massima",()=>{P.maxHp+=20;P.hp+=20}],["Forza","+5 danni",()=>P.dmg+=5],["Agilità","+8% velocità",()=>P.speed*=1.08]];opts.forEach(([n,d,f])=>{let b=document.createElement("button");b.className="reward-card";b.innerHTML=`<strong>${n}</strong><span>${d}</span>`;b.onclick=()=>{f();ui.level.classList.remove("visible");state="play";hud()};ui.levelGrid.appendChild(b)});ui.level.classList.add("visible");note(`Livello ${P.level}`)}
 function dodge(){if(state!=="play"||P.dodgeCd>0||P.st<24)return;P.dodgeCd=.72;P.dodge=.22;P.inv=.34;P.st-=24;burst(P.x,P.y,"#8db9d8",10)}
@@ -83,12 +177,12 @@ function openShop(){state="shop";ui.shopCoins.textContent=coins;renderShop();ui.
 function renderShop(){ui.shopGrid.innerHTML="";SHOP.forEach(i=>{let disabled=coins<i.cost||shopBought.has(i.id),b=document.createElement("button");b.className="reward-card"+(disabled?" disabled":"");b.innerHTML=`<strong>${i.name}</strong><span>${i.desc}</span><em>${shopBought.has(i.id)?"Acquistato":i.cost+" monete"}</em>`;b.onclick=()=>{if(disabled)return;coins-=i.cost;i.buy();shopBought.add(i.id);ui.shopCoins.textContent=coins;renderShop();hud()};ui.shopGrid.appendChild(b)})}
 function nextRoom(){room++;spawn();state="play";hud();saveRun()}
 function leaveShop(){ui.shop.classList.remove("visible");nextRoom()}
-function gameOver(){state="over";clearSave();let sc=score(),r=JSON.parse(localStorage.getItem("eclipseRecord")||'{"room":0,"score":0}');r.room=Math.max(r.room,room);r.score=Math.max(r.score,sc);localStorage.setItem("eclipseRecord",JSON.stringify(r));ui.summary.innerHTML=`<div><span>Stanza raggiunta</span><b>${room}</b></div><div><span>Livello</span><b>${P.level}</b></div><div><span>Uccisioni</span><b>${kills}</b></div><div><span>Anime</span><b>${souls}</b></div><div><span>Punteggio</span><b>${sc}</b></div>`;ui.over.classList.add("visible");record()}
+function gameOver(){state="over";clearSave();let gainedEssence=Math.max(1,Math.floor(room/3)+Math.floor(missionsDone/2));let meta=loadMeta();meta.essence+=gainedEssence;saveMeta(meta);let sc=score(),r=JSON.parse(localStorage.getItem("eclipseRecord")||'{"room":0,"score":0}');r.room=Math.max(r.room,room);r.score=Math.max(r.score,sc);localStorage.setItem("eclipseRecord",JSON.stringify(r));ui.summary.innerHTML=`<div><span>Stanza raggiunta</span><b>${room}</b></div><div><span>Livello</span><b>${P.level}</b></div><div><span>Uccisioni</span><b>${kills}</b></div><div><span>Anime</span><b>${souls}</b></div><div><span>Punteggio</span><b>${sc}</b></div><div><span>Essenza ottenuta</span><b>${gainedEssence}</b></div>`;ui.over.classList.add("visible");record()}
 function togglePause(){if(state==="play"){state="pause";ui.pause.classList.add("visible")}else if(state==="pause"){state="play";ui.pause.classList.remove("visible")}}
 function backMenu(){hide();state="menu";ui.menu.classList.add("visible");record()}
 function saveQuit(){saveRun();backMenu();note("Run salvata")}
 function note(t){ui.toast.textContent=t;ui.toast.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>ui.toast.classList.remove("show"),1700)}
-function hud(){ui.healthBar.style.width=`${Math.max(0,P.hp/P.maxHp*100)}%`;ui.staminaBar.style.width=`${P.st/P.maxSt*100}%`;ui.xpBar.style.width=`${P.xp/P.nextXp*100}%`;ui.healthText.textContent=`${Math.ceil(P.hp)}/${Math.ceil(P.maxHp)}`;ui.staminaText.textContent=`${Math.ceil(P.st)}/${Math.ceil(P.maxSt)}`;ui.levelText.textContent=`Lv. ${P.level}`;ui.roomNumber.textContent=room;ui.coins.textContent=coins;ui.souls.textContent=souls;ui.kills.textContent=kills;ui.relicCount.textContent=relics.length;ui.potionCount.textContent=potions;ui.skillStatus.textContent=P.skillCd<=0?"Pronta":Math.ceil(P.skillCd)+"s";ui.curseStatus.textContent=curse?CURSES.find(c=>c.id===curse).name:"Nessuna";ui.biomeName.textContent=BIOMES[biome].name;ui.comboValue.textContent=combo;ui.comboDisplay.classList.toggle("show",combo>1);drawMap()}
+function hud(){ui.healthBar.style.width=`${Math.max(0,P.hp/P.maxHp*100)}%`;ui.staminaBar.style.width=`${P.st/P.maxSt*100}%`;ui.xpBar.style.width=`${P.xp/P.nextXp*100}%`;ui.healthText.textContent=`${Math.ceil(P.hp)}/${Math.ceil(P.maxHp)}`;ui.staminaText.textContent=`${Math.ceil(P.st)}/${Math.ceil(P.maxSt)}`;ui.levelText.textContent=`Lv. ${P.level}`;ui.roomNumber.textContent=room;ui.coins.textContent=coins;ui.souls.textContent=souls;ui.kills.textContent=kills;ui.relicCount.textContent=relics.length;ui.potionCount.textContent=potions;ui.skillStatus.textContent=P.skillCd<=0?"Pronta":Math.ceil(P.skillCd)+"s";ui.curseStatus.textContent=curse?CURSES.find(c=>c.id===curse).name:"Nessuna";ui.biomeName.textContent=BIOMES[biome].name;ui.comboValue.textContent=combo;ui.comboDisplay.classList.toggle("show",combo>1);const meta=loadMeta();ui.essence.textContent=meta.essence;ui.missionsDone.textContent=missionsDone;if(quest){ui.questName.textContent=quest.name;ui.questProgress.textContent=`${Math.min(quest.progress||0,quest.target)}/${quest.target}`;}else{ui.questName.textContent="Nessuna";ui.questProgress.textContent="0/0"}drawMap()}
 function drawMap(){ui.minimap.innerHTML="";for(let i=1;i<=15;i++){let q=document.createElement("i");if(i<room)q.className="done";if(i===room)q.className="current";ui.minimap.appendChild(q)}}
 function burst(x,y,color,n){for(let i=0;i<n;i++){let a=Math.random()*Math.PI*2,s=25+Math.random()*120;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.25+Math.random()*.45,color,size:2+Math.random()*4})}}
 function beep(freq,dur){if(settings.volume<=0)return;try{let ac=beep.ac||(beep.ac=new(window.AudioContext||window.webkitAudioContext)()),o=ac.createOscillator(),g=ac.createGain();o.frequency.value=freq;o.type="triangle";g.gain.value=settings.volume/100*.08;o.connect(g);g.connect(ac.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);o.stop(ac.currentTime+dur)}catch{}}
@@ -100,7 +194,7 @@ function drawShot(s){X.fillStyle=s.color||"#a47cd1";X.beginPath();X.arc(s.x,s.y,
 function drawDrop(d){X.fillStyle=d.type==="coin"?"#e0b84d":"#46d49a";X.fillRect(d.x-4,d.y-4,8,8)}
 function loop(t){let dt=Math.min((t-last)/1000||0,.033);last=t;update(dt);draw()}
 document.addEventListener("keydown",e=>{keys.add(e.code);if(e.code==="Space"){e.preventDefault();attack()}if(e.code.startsWith("Shift"))dodge();if(e.code==="KeyE")drink();if(e.code==="KeyQ")skill();if(e.code==="KeyP")togglePause()});document.addEventListener("keyup",e=>keys.delete(e.code));
-$("newRunButton").onclick=newRun;ui.continueButton.onclick=loadRun;$("settingsButton").onclick=()=>{ui.menu.classList.remove("visible");ui.settings.classList.add("visible")};$("codexButton").onclick=openCodex;$("closeCodex").onclick=()=>{ui.codex.classList.remove("visible");ui.menu.classList.add("visible")};$("closeSettings").onclick=()=>{saveSettings();ui.settings.classList.remove("visible");ui.menu.classList.add("visible")};$("fullscreenButton").onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();$("resumeButton").onclick=togglePause;$("saveQuitButton").onclick=saveQuit;$("restartButton").onclick=newRun;$("menuButton").onclick=backMenu;$("leaveShop").onclick=leaveShop;
+$("newRunButton").onclick=newRun;ui.continueButton.onclick=loadRun;$("settingsButton").onclick=()=>{ui.menu.classList.remove("visible");ui.settings.classList.add("visible")};$("codexButton").onclick=openCodex;$("closeCodex").onclick=()=>{ui.codex.classList.remove("visible");ui.menu.classList.add("visible")};$("legacyButton").onclick=openLegacy;$("closeLegacy").onclick=()=>{ui.legacy.classList.remove("visible");ui.menu.classList.add("visible")};$("storyButton").onclick=()=>startStory(true);$("storyNextButton").onclick=nextStory;$("closeStoryButton").onclick=()=>{ui.story.classList.remove("visible");ui.menu.classList.add("visible")};$("claimMissionButton").onclick=claimMission;$("closeSettings").onclick=()=>{saveSettings();ui.settings.classList.remove("visible");ui.menu.classList.add("visible")};$("fullscreenButton").onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();$("resumeButton").onclick=togglePause;$("saveQuitButton").onclick=saveQuit;$("restartButton").onclick=newRun;$("menuButton").onclick=backMenu;$("leaveShop").onclick=leaveShop;
 [ui.volume,ui.effects,ui.difficulty].forEach(e=>e.addEventListener("change",saveSettings));
 document.querySelectorAll("[data-key]").forEach(b=>{let code=b.dataset.key,down=e=>{e.preventDefault();keys.add(code);if(code==="Space")attack();if(code==="ShiftLeft")dodge();if(code==="KeyE")drink();if(code==="KeyQ")skill()},up=e=>{e.preventDefault();keys.delete(code)};b.addEventListener("pointerdown",down);["pointerup","pointercancel","pointerleave"].forEach(n=>b.addEventListener(n,up))});
 applySettings();record();hud();requestAnimationFrame(loop);

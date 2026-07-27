@@ -1,16 +1,17 @@
-# Project Eclipse 2D — v0.5 Eclipse Ascendant
+# Project Eclipse 2D — v0.6 Oathbound
 
 ## Novità principali
 
-- Quattro biomi che cambiano ogni quattro stanze
-- Cripta del Ferro, Bosco Sepolto, Rovine Dorate e Abisso Violetto
-- Nemici élite più forti con aura dorata
-- Sistema combo: i colpi consecutivi aumentano il danno
-- Tre Maledizioni con vantaggi e penalità
-- Codice delle Reliquie con scoperte permanenti
-- Boss più aggressivi e crescita progressiva della difficoltà
-- Salvataggio di bioma, maledizione e progressione
-- Interfaccia aggiornata con bioma, combo e stato maledizione
+- Prologo narrativo in tre capitoli
+- Missioni casuali durante ogni run
+- Ricompense missione: monete, pozioni, cure ed Essenza
+- Essenza permanente ottenuta anche alla morte
+- Altare dell’Eredità con quattro potenziamenti permanenti
+- Vita, danno, monete iniziali ed esperienza migliorabili
+- Boss con nomi diversi per ogni bioma
+- Banner di ingresso dei boss
+- Salvataggio delle missioni e della progressione
+- Interfaccia aggiornata con missione, Essenza e missioni completate
 
 ## Comandi
 
@@ -21,7 +22,7 @@
 - Q: abilità speciale
 - P: pausa
 
-## Aggiornamento GitHub Pages
+## Pubblicazione su GitHub Pages
 
 Sostituisci nella radice del repository:
 
@@ -32,4 +33,4 @@ Sostituisci nella radice del repository:
 
 Messaggio commit consigliato:
 
-`Aggiornamento Project Eclipse v0.5 Eclipse Ascendant`
+`Aggiornamento Project Eclipse v0.6 Oathbound`

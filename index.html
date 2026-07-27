@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta name="theme-color" content="#07080c">
-  <title>Project Eclipse — v0.5 Eclipse Ascendant</title>
+  <title>Project Eclipse — v0.6 Oathbound</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main class="game-shell">
   <header class="topbar">
-    <div class="logo"><strong>PROJECT ECLIPSE</strong><span>v0.5 · Eclipse Ascendant</span></div>
+    <div class="logo"><strong>PROJECT ECLIPSE</strong><span>v0.6 · Oathbound</span></div>
     <div class="stats">
       <div class="stat-row"><span>Vita</span><div class="bar"><i id="healthBar" class="health"></i></div><b id="healthText">120/120</b></div>
       <div class="stat-row"><span>Stamina</span><div class="bar"><i id="staminaBar" class="stamina"></i></div><b id="staminaText">100/100</b></div>
@@ -19,14 +19,14 @@
     <div class="run-data">
       <span>Stanza <b id="roomNumber">1</b></span>
       <span>Monete <b id="coins">0</b></span>
-      <span>Anime <b id="souls">0</b></span><span>Bioma <b id="biomeName">Cripta</b></span>
+      <span>Anime <b id="souls">0</b></span><span>Bioma <b id="biomeName">Cripta</b></span><span>Essenza <b id="essence">0</b></span>
     </div>
   </header>
 
   <section class="game-frame">
-    <canvas id="gameCanvas" width="960" height="540"></canvas>
+    <canvas id="gameCanvas" width="960" height="540"></canvas><div id="bossBanner" class="boss-banner"><small>BOSS</small><strong id="bossName">Custode dell’Eclissi</strong></div>
     <aside id="minimap" class="minimap"></aside>
-    <div id="toast" class="toast"></div><div id="comboDisplay" class="combo-display">COMBO ×<b id="comboValue">0</b></div>
+    <div id="toast" class="toast"></div><div id="comboDisplay" class="combo-display">COMBO ×<b id="comboValue">0</b></div><div id="questTracker" class="quest-tracker"><span>MISSIONE</span><b id="questName">Nessuna</b><small id="questProgress">0/0</small></div>
 
     <div id="mainMenu" class="overlay visible">
       <div class="panel title-panel">
@@ -35,12 +35,43 @@
         <p>Un roguelike dark fantasy procedurale. Ogni stanza cambia, ogni morte lascia un ricordo.</p>
         <button id="newRunButton">NUOVA RUN</button>
         <button id="continueButton" class="secondary">CONTINUA RUN</button>
-        <button id="settingsButton" class="secondary">IMPOSTAZIONI</button><button id="codexButton" class="secondary">CODICE DELLE RELIQUIE</button>
+        <button id="settingsButton" class="secondary">IMPOSTAZIONI</button><button id="codexButton" class="secondary">CODICE DELLE RELIQUIE</button><button id="legacyButton" class="secondary">ALTARE DELL’EREDITÀ</button><button id="storyButton" class="secondary">STORIA</button>
         <div class="record">
           <span>Record stanza: <b id="bestRoom">0</b></span>
           <span>Miglior punteggio: <b id="bestScore">0</b></span>
         </div>
         <small>WASD/Frecce · Spazio: attacco · Shift: schivata · E: pozione · Q: abilità · P: pausa</small>
+      </div>
+    </div>
+
+
+    <div id="storyScreen" class="overlay">
+      <div class="panel story-panel">
+        <p class="eyebrow">IL GIURAMENTO SPEZZATO</p>
+        <h2 id="storyTitle">Prologo</h2>
+        <div id="storyText" class="story-text"></div>
+        <button id="storyNextButton">CONTINUA</button>
+        <button id="closeStoryButton" class="secondary">TORNA AL MENU</button>
+      </div>
+    </div>
+
+    <div id="legacyScreen" class="overlay">
+      <div class="panel">
+        <p class="eyebrow">ALTARE DELL’EREDITÀ</p>
+        <h2>Potere permanente</h2>
+        <p>Spendi l’Essenza ottenuta alla fine delle run. I potenziamenti restano per sempre.</p>
+        <p class="legacy-balance">Essenza disponibile: <b id="legacyEssence">0</b></p>
+        <div id="legacyGrid" class="reward-grid"></div>
+        <button id="closeLegacy" class="secondary">INDIETRO</button>
+      </div>
+    </div>
+
+    <div id="missionCompleteScreen" class="overlay">
+      <div class="panel compact">
+        <p class="eyebrow">MISSIONE COMPLETATA</p>
+        <h2 id="missionCompleteTitle">Ricompensa ottenuta</h2>
+        <p id="missionCompleteText"></p>
+        <button id="claimMissionButton">RISCUOTI</button>
       </div>
     </div>
 
@@ -134,7 +165,7 @@
     <span>Reliquie <b id="relicCount">0</b></span>
     <span>Pozioni <b id="potionCount">1</b></span>
     <span>Uccisioni <b id="kills">0</b></span>
-    <span>Abilità <b id="skillStatus">Pronta</b></span><span>Maledizione <b id="curseStatus">Nessuna</b></span>
+    <span>Abilità <b id="skillStatus">Pronta</b></span><span>Maledizione <b id="curseStatus">Nessuna</b></span><span>Missioni <b id="missionsDone">0</b></span>
   </footer>
 </main>
 <script src="game.js"></script>
