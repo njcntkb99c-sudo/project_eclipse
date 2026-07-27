@@ -1,446 +1,51 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-const ui = {
-  healthBar: document.getElementById("healthBar"),
-  staminaBar: document.getElementById("staminaBar"),
-  roomNumber: document.getElementById("roomNumber"),
-  souls: document.getElementById("souls"),
-  startScreen: document.getElementById("startScreen"),
-  upgradeScreen: document.getElementById("upgradeScreen"),
-  gameOverScreen: document.getElementById("gameOverScreen"),
-};
-
-const keys = new Set();
-let running = false;
-let room = 1;
-let souls = 0;
-let enemies = [];
-let particles = [];
-let lastTime = 0;
-
-const arena = {
-  x: 55,
-  y: 55,
-  width: canvas.width - 110,
-  height: canvas.height - 110,
-};
-
-const player = {
-  x: canvas.width / 2,
-  y: canvas.height / 2,
-  radius: 18,
-  speed: 210,
-  maxHealth: 120,
-  health: 120,
-  maxStamina: 100,
-  stamina: 100,
-  damage: 20,
-  attackCooldown: 0,
-  dodgeCooldown: 0,
-  invulnerable: 0,
-  dodgeTime: 0,
-  facingX: 1,
-  facingY: 0,
-};
-
-function resetRun() {
-  room = 1;
-  souls = 0;
-  Object.assign(player, {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-    maxHealth: 120,
-    health: 120,
-    maxStamina: 100,
-    stamina: 100,
-    damage: 20,
-    attackCooldown: 0,
-    dodgeCooldown: 0,
-    invulnerable: 0,
-    dodgeTime: 0,
-  });
-  spawnRoom();
-  updateHud();
+const canvas=document.getElementById("gameCanvas"),ctx=canvas.getContext("2d");
+const ui={healthBar:document.getElementById("healthBar"),staminaBar:document.getElementById("staminaBar"),healthText:document.getElementById("healthText"),staminaText:document.getElementById("staminaText"),roomNumber:document.getElementById("roomNumber"),souls:document.getElementById("souls"),kills:document.getElementById("kills"),startScreen:document.getElementById("startScreen"),upgradeScreen:document.getElementById("upgradeScreen"),pauseScreen:document.getElementById("pauseScreen"),gameOverScreen:document.getElementById("gameOverScreen"),upgradeGrid:document.getElementById("upgradeGrid"),announcement:document.getElementById("announcement"),runSummary:document.getElementById("runSummary")};
+const keys=new Set(),arena={x:52,y:52,width:856,height:436};
+let running=false,paused=false,room=1,souls=0,kills=0,enemies=[],particles=[],slashes=[],lastTime=0,shake=0,announceTimer=0;
+const player={x:480,y:270,radius:17,speed:210,maxHealth:120,health:120,maxStamina:100,stamina:100,damage:22,attackCooldown:0,dodgeCooldown:0,invulnerable:0,dodgeTime:0,facingX:1,facingY:0,critChance:.08,lifeSteal:0};
+const relics=[
+{id:"health",name:"Cuore d'Acciaio",text:"+30 vita massima e cura completa",tag:"DIFESA"},
+{id:"damage",name:"Lama del Giuramento",text:"+7 danni e +2% probabilità critica",tag:"OFFESA"},
+{id:"stamina",name:"Respiro dell'Infranto",text:"+30 stamina e rigenerazione più rapida",tag:"MOBILITÀ"},
+{id:"vampire",name:"Dente Cremisi",text:"Recuperi il 5% del danno inflitto",tag:"SANGUE"},
+{id:"speed",name:"Passo del Corvo",text:"+12% velocità di movimento",tag:"AGILITÀ"},
+{id:"crit",name:"Occhio dell'Eclissi",text:"+12% probabilità di colpo critico",tag:"FORTUNA"}];
+function resetRun(){room=1;souls=0;kills=0;Object.assign(player,{x:480,y:270,speed:210,maxHealth:120,health:120,maxStamina:100,stamina:100,damage:22,attackCooldown:0,dodgeCooldown:0,invulnerable:0,dodgeTime:0,critChance:.08,lifeSteal:0});spawnRoom();updateHud()}
+function startRun(){resetRun();[ui.startScreen,ui.gameOverScreen,ui.upgradeScreen,ui.pauseScreen].forEach(x=>x.classList.remove("visible"));paused=false;running=true;announce("STANZA I")}
+function spawnRoom(){enemies=[];const boss=room%5===0;if(boss){enemies.push(makeEnemy("boss",480,145));announce("IL CUSTODE DELL'ECLISSI")}else{const count=Math.min(2+Math.floor(room*.8),9);for(let i=0;i<count;i++){let x,y;do{x=arena.x+50+Math.random()*(arena.width-100);y=arena.y+50+Math.random()*(arena.height-100)}while(Math.hypot(x-player.x,y-player.y)<190);enemies.push(makeEnemy(Math.random()<Math.min(.18+room*.025,.48)?"archer":"knight",x,y))}}}
+function makeEnemy(type,x,y){const boss=type==="boss",archer=type==="archer",health=(boss?250:archer?38:48)+room*(boss?30:8);return{type,x,y,radius:boss?30:archer?14:17,speed:boss?62:archer?72:58+room*3,health,maxHealth:health,damage:(boss?20:archer?9:12)+room*1.5,hitCooldown:0,flash:0,shotCooldown:1+Math.random(),phase:Math.random()*6.28}}
+function update(dt){if(!running||paused)return;["attackCooldown","dodgeCooldown","invulnerable","dodgeTime"].forEach(k=>player[k]=Math.max(0,player[k]-dt));shake=Math.max(0,shake-dt*30);announceTimer=Math.max(0,announceTimer-dt);if(!announceTimer)ui.announcement.classList.remove("visible");
+let dx=0,dy=0;if(keys.has("KeyW")||keys.has("ArrowUp"))dy--;if(keys.has("KeyS")||keys.has("ArrowDown"))dy++;if(keys.has("KeyA")||keys.has("ArrowLeft"))dx--;if(keys.has("KeyD")||keys.has("ArrowRight"))dx++;
+const len=Math.hypot(dx,dy);if(len){dx/=len;dy/=len;player.facingX=dx;player.facingY=dy;const speed=player.dodgeTime?player.speed*2.7:player.speed;player.x+=dx*speed*dt;player.y+=dy*speed*dt}
+player.x=Math.max(arena.x+player.radius,Math.min(arena.x+arena.width-player.radius,player.x));player.y=Math.max(arena.y+player.radius,Math.min(arena.y+arena.height-player.radius,player.y));if(!player.dodgeTime)player.stamina=Math.min(player.maxStamina,player.stamina+(32+player.maxStamina*.04)*dt);
+for(const e of enemies){e.hitCooldown=Math.max(0,e.hitCooldown-dt);e.flash=Math.max(0,e.flash-dt);e.shotCooldown-=dt;e.phase+=dt;const vx=player.x-e.x,vy=player.y-e.y,dist=Math.hypot(vx,vy)||1;
+if(e.type==="archer"){if(dist<180){e.x-=vx/dist*e.speed*.65*dt;e.y-=vy/dist*e.speed*.65*dt}else if(dist>270){e.x+=vx/dist*e.speed*.65*dt;e.y+=vy/dist*e.speed*.65*dt}if(e.shotCooldown<=0){e.shotCooldown=1.7;particles.push({x:e.x,y:e.y,vx:vx/dist*230,vy:vy/dist*230,life:2.4,color:"#d46a49",size:7,projectile:true,damage:e.damage})}}
+else{e.x+=vx/dist*e.speed*dt;e.y+=vy/dist*e.speed*dt;if(dist<player.radius+e.radius+4&&e.hitCooldown<=0)hurtPlayer(e.damage,e)}
 }
-
-function startRun() {
-  resetRun();
-  ui.startScreen.classList.remove("visible");
-  ui.gameOverScreen.classList.remove("visible");
-  ui.upgradeScreen.classList.remove("visible");
-  running = true;
-}
-
-function spawnRoom() {
-  enemies = [];
-  const count = Math.min(2 + room, 8);
-
-  for (let i = 0; i < count; i++) {
-    let x;
-    let y;
-
-    do {
-      x = arena.x + 45 + Math.random() * (arena.width - 90);
-      y = arena.y + 45 + Math.random() * (arena.height - 90);
-    } while (Math.hypot(x - player.x, y - player.y) < 180);
-
-    enemies.push({
-      x,
-      y,
-      radius: 16,
-      speed: 55 + room * 4,
-      health: 30 + room * 8,
-      maxHealth: 30 + room * 8,
-      damage: 10 + room * 2,
-      hitCooldown: 0,
-      flash: 0,
-    });
-  }
-}
-
-function update(dt) {
-  if (!running) return;
-
-  player.attackCooldown = Math.max(0, player.attackCooldown - dt);
-  player.dodgeCooldown = Math.max(0, player.dodgeCooldown - dt);
-  player.invulnerable = Math.max(0, player.invulnerable - dt);
-  player.dodgeTime = Math.max(0, player.dodgeTime - dt);
-
-  let dx = 0;
-  let dy = 0;
-
-  if (keys.has("KeyW") || keys.has("ArrowUp")) dy -= 1;
-  if (keys.has("KeyS") || keys.has("ArrowDown")) dy += 1;
-  if (keys.has("KeyA") || keys.has("ArrowLeft")) dx -= 1;
-  if (keys.has("KeyD") || keys.has("ArrowRight")) dx += 1;
-
-  const length = Math.hypot(dx, dy);
-  if (length > 0) {
-    dx /= length;
-    dy /= length;
-    player.facingX = dx;
-    player.facingY = dy;
-
-    const speed = player.dodgeTime > 0 ? player.speed * 2.6 : player.speed;
-    player.x += dx * speed * dt;
-    player.y += dy * speed * dt;
-  }
-
-  player.x = Math.max(arena.x + player.radius, Math.min(arena.x + arena.width - player.radius, player.x));
-  player.y = Math.max(arena.y + player.radius, Math.min(arena.y + arena.height - player.radius, player.y));
-
-  if (player.dodgeTime <= 0) {
-    player.stamina = Math.min(player.maxStamina, player.stamina + 28 * dt);
-  }
-
-  for (const enemy of enemies) {
-    enemy.hitCooldown = Math.max(0, enemy.hitCooldown - dt);
-    enemy.flash = Math.max(0, enemy.flash - dt);
-
-    const vx = player.x - enemy.x;
-    const vy = player.y - enemy.y;
-    const dist = Math.hypot(vx, vy) || 1;
-
-    enemy.x += (vx / dist) * enemy.speed * dt;
-    enemy.y += (vy / dist) * enemy.speed * dt;
-
-    if (
-      dist < player.radius + enemy.radius + 3 &&
-      enemy.hitCooldown <= 0 &&
-      player.invulnerable <= 0
-    ) {
-      player.health -= enemy.damage;
-      enemy.hitCooldown = 0.9;
-      player.invulnerable = 0.45;
-      burst(player.x, player.y, "#b73a48", 10);
-
-      if (player.health <= 0) {
-        player.health = 0;
-        running = false;
-        ui.gameOverScreen.classList.add("visible");
-      }
-    }
-  }
-
-  enemies = enemies.filter((enemy) => enemy.health > 0);
-
-  for (const particle of particles) {
-    particle.life -= dt;
-    particle.x += particle.vx * dt;
-    particle.y += particle.vy * dt;
-  }
-  particles = particles.filter((particle) => particle.life > 0);
-
-  if (enemies.length === 0 && running) {
-    running = false;
-    ui.upgradeScreen.classList.add("visible");
-  }
-
-  updateHud();
-}
-
-function attack() {
-  if (!running || player.attackCooldown > 0 || player.stamina < 16) return;
-
-  player.attackCooldown = 0.34;
-  player.stamina -= 16;
-
-  const reach = 62;
-  const attackX = player.x + player.facingX * 40;
-  const attackY = player.y + player.facingY * 40;
-
-  burst(attackX, attackY, "#d6ae5d", 7);
-
-  for (const enemy of enemies) {
-    const dist = Math.hypot(enemy.x - attackX, enemy.y - attackY);
-    if (dist < reach) {
-      enemy.health -= player.damage;
-      enemy.flash = 0.12;
-
-      const knockX = enemy.x - player.x;
-      const knockY = enemy.y - player.y;
-      const knockLength = Math.hypot(knockX, knockY) || 1;
-      enemy.x += (knockX / knockLength) * 20;
-      enemy.y += (knockY / knockLength) * 20;
-
-      if (enemy.health <= 0) {
-        souls += 5;
-        burst(enemy.x, enemy.y, "#39c786", 14);
-      }
-    }
-  }
-}
-
-function dodge() {
-  if (!running || player.dodgeCooldown > 0 || player.stamina < 25) return;
-  player.dodgeCooldown = 0.75;
-  player.dodgeTime = 0.22;
-  player.invulnerable = 0.32;
-  player.stamina -= 25;
-  burst(player.x, player.y, "#8cb8d8", 8);
-}
-
-function chooseUpgrade(type) {
-  if (type === "health") {
-    player.maxHealth += 25;
-    player.health = player.maxHealth;
-  } else if (type === "damage") {
-    player.damage += 5;
-    player.health = Math.min(player.maxHealth, player.health + 20);
-  } else if (type === "stamina") {
-    player.maxStamina += 25;
-    player.stamina = player.maxStamina;
-  }
-
-  room += 1;
-  player.x = canvas.width / 2;
-  player.y = canvas.height / 2;
-  spawnRoom();
-  ui.upgradeScreen.classList.remove("visible");
-  running = true;
-  updateHud();
-}
-
-function burst(x, y, color, amount) {
-  for (let i = 0; i < amount; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 30 + Math.random() * 120;
-    particles.push({
-      x,
-      y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      life: 0.25 + Math.random() * 0.45,
-      color,
-      size: 2 + Math.random() * 4,
-    });
-  }
-}
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, "#151a22");
-  gradient.addColorStop(1, "#080a0e");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  drawArena();
-  drawDecorations();
-
-  for (const enemy of enemies) drawEnemy(enemy);
-  drawPlayer();
-
-  for (const particle of particles) {
-    ctx.globalAlpha = Math.max(0, particle.life * 2);
-    ctx.fillStyle = particle.color;
-    ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
-  }
-  ctx.globalAlpha = 1;
-
-  requestAnimationFrame(loop);
-}
-
-function drawArena() {
-  ctx.fillStyle = "#1b2028";
-  ctx.fillRect(arena.x, arena.y, arena.width, arena.height);
-
-  ctx.strokeStyle = "#4f5360";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(arena.x, arena.y, arena.width, arena.height);
-
-  ctx.strokeStyle = "rgba(214,174,93,.12)";
-  ctx.lineWidth = 1;
-
-  for (let x = arena.x + 40; x < arena.x + arena.width; x += 40) {
-    ctx.beginPath();
-    ctx.moveTo(x, arena.y);
-    ctx.lineTo(x, arena.y + arena.height);
-    ctx.stroke();
-  }
-
-  for (let y = arena.y + 40; y < arena.y + arena.height; y += 40) {
-    ctx.beginPath();
-    ctx.moveTo(arena.x, y);
-    ctx.lineTo(arena.x + arena.width, y);
-    ctx.stroke();
-  }
-}
-
-function drawDecorations() {
-  ctx.fillStyle = "#2b3039";
-  const pillars = [
-    [arena.x + 25, arena.y + 25],
-    [arena.x + arena.width - 45, arena.y + 25],
-    [arena.x + 25, arena.y + arena.height - 45],
-    [arena.x + arena.width - 45, arena.y + arena.height - 45],
-  ];
-
-  for (const [x, y] of pillars) {
-    ctx.fillRect(x, y, 20, 20);
-    ctx.strokeStyle = "#6d5c3d";
-    ctx.strokeRect(x, y, 20, 20);
-  }
-}
-
-function drawPlayer() {
-  ctx.save();
-  ctx.translate(player.x, player.y);
-
-  if (player.invulnerable > 0) {
-    ctx.globalAlpha = 0.55 + Math.sin(performance.now() * 0.03) * 0.2;
-  }
-
-  ctx.fillStyle = "#20252d";
-  ctx.beginPath();
-  ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "#d6ae5d";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  ctx.fillStyle = "#39c786";
-  ctx.beginPath();
-  ctx.arc(-5, -3, 3, 0, Math.PI * 2);
-  ctx.arc(5, -3, 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "#d6ae5d";
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(player.facingX * 14, player.facingY * 14);
-  ctx.lineTo(player.facingX * 34, player.facingY * 34);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-function drawEnemy(enemy) {
-  ctx.save();
-  ctx.translate(enemy.x, enemy.y);
-
-  ctx.fillStyle = enemy.flash > 0 ? "#e7dbcc" : "#6f2e38";
-  ctx.beginPath();
-  ctx.arc(0, 0, enemy.radius, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "#1a0d10";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  ctx.fillStyle = "#e4c35e";
-  ctx.fillRect(-6, -4, 4, 3);
-  ctx.fillRect(2, -4, 4, 3);
-
-  const barWidth = 34;
-  const ratio = enemy.health / enemy.maxHealth;
-  ctx.fillStyle = "#111";
-  ctx.fillRect(-barWidth / 2, -27, barWidth, 4);
-  ctx.fillStyle = "#b43a48";
-  ctx.fillRect(-barWidth / 2, -27, barWidth * ratio, 4);
-
-  ctx.restore();
-}
-
-function updateHud() {
-  ui.healthBar.style.width = `${(player.health / player.maxHealth) * 100}%`;
-  ui.staminaBar.style.width = `${(player.stamina / player.maxStamina) * 100}%`;
-  ui.roomNumber.textContent = room;
-  ui.souls.textContent = souls;
-}
-
-function loop(time) {
-  const dt = Math.min((time - lastTime) / 1000 || 0, 0.033);
-  lastTime = time;
-  update(dt);
-  draw();
-}
-
-document.addEventListener("keydown", (event) => {
-  keys.add(event.code);
-  if (event.code === "Space") {
-    event.preventDefault();
-    attack();
-  }
-  if (event.code === "ShiftLeft" || event.code === "ShiftRight") {
-    dodge();
-  }
-});
-
-document.addEventListener("keyup", (event) => {
-  keys.delete(event.code);
-});
-
-document.getElementById("startButton").addEventListener("click", startRun);
-document.getElementById("restartButton").addEventListener("click", startRun);
-
-document.querySelectorAll(".upgrade").forEach((button) => {
-  button.addEventListener("click", () => chooseUpgrade(button.dataset.upgrade));
-});
-
-document.querySelectorAll("[data-key]").forEach((button) => {
-  const code = button.dataset.key;
-
-  const press = (event) => {
-    event.preventDefault();
-    keys.add(code);
-    if (code === "Space") attack();
-    if (code === "ShiftLeft") dodge();
-  };
-
-  const release = (event) => {
-    event.preventDefault();
-    keys.delete(code);
-  };
-
-  button.addEventListener("pointerdown", press);
-  button.addEventListener("pointerup", release);
-  button.addEventListener("pointercancel", release);
-  button.addEventListener("pointerleave", release);
-});
-
-updateHud();
-requestAnimationFrame(loop);
+for(const p of particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.projectile&&p.life>0&&Math.hypot(p.x-player.x,p.y-player.y)<player.radius+p.size&&player.invulnerable<=0){p.life=0;hurtPlayer(p.damage,null)}}
+particles=particles.filter(p=>p.life>0);slashes=slashes.filter(s=>(s.life-=dt)>0);enemies=enemies.filter(e=>e.health>0);
+if(!enemies.length&&running){running=false;showRelics()}updateHud()}
+function hurtPlayer(amount,enemy){player.health-=amount;player.invulnerable=.48;shake=8;burst(player.x,player.y,"#c43e52",12);if(enemy)enemy.hitCooldown=.9;if(player.health<=0){player.health=0;running=false;ui.runSummary.textContent=`Hai raggiunto la stanza ${room}, eliminato ${kills} nemici e raccolto ${souls} Frammenti.`;ui.gameOverScreen.classList.add("visible")}}
+function attack(){if(!running||paused||player.attackCooldown>0||player.stamina<15)return;player.attackCooldown=.31;player.stamina-=15;const ax=player.x+player.facingX*42,ay=player.y+player.facingY*42;slashes.push({x:player.x,y:player.y,angle:Math.atan2(player.facingY,player.facingX),life:.16});let hit=false;
+for(const e of enemies){if(Math.hypot(e.x-ax,e.y-ay)<68+e.radius){const crit=Math.random()<player.critChance,dmg=player.damage*(crit?1.75:1);e.health-=dmg;e.flash=.12;hit=true;const kx=e.x-player.x,ky=e.y-player.y,kl=Math.hypot(kx,ky)||1;e.x+=kx/kl*24;e.y+=ky/kl*24;player.health=Math.min(player.maxHealth,player.health+dmg*player.lifeSteal);burst(e.x,e.y,crit?"#f4d477":"#d3b568",crit?13:7);if(e.health<=0){souls+=e.type==="boss"?50:e.type==="archer"?8:5;kills++;burst(e.x,e.y,"#42d494",18)}}}if(hit)shake=4}
+function dodge(){if(!running||paused||player.dodgeCooldown>0||player.stamina<25)return;player.dodgeCooldown=.72;player.dodgeTime=.22;player.invulnerable=.34;player.stamina-=25;burst(player.x,player.y,"#8abbd9",9)}
+function showRelics(){const picks=[...relics].sort(()=>Math.random()-.5).slice(0,3);ui.upgradeGrid.innerHTML=picks.map(r=>`<button class="upgrade" data-upgrade="${r.id}"><strong>${r.name}</strong><span>${r.text}</span><em>${r.tag}</em></button>`).join("");ui.upgradeGrid.querySelectorAll("button").forEach(b=>b.onclick=()=>chooseRelic(b.dataset.upgrade));ui.upgradeScreen.classList.add("visible")}
+function chooseRelic(id){if(id==="health"){player.maxHealth+=30;player.health=player.maxHealth}if(id==="damage"){player.damage+=7;player.critChance+=.02}if(id==="stamina"){player.maxStamina+=30;player.stamina=player.maxStamina}if(id==="vampire")player.lifeSteal+=.05;if(id==="speed")player.speed*=1.12;if(id==="crit")player.critChance+=.12;room++;player.x=480;player.y=270;spawnRoom();ui.upgradeScreen.classList.remove("visible");running=true;announce(room%5===0?"PRESENZA OSCURA":`STANZA ${room}`)}
+function burst(x,y,color,n){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=35+Math.random()*130;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.25+Math.random()*.45,color,size:2+Math.random()*4})}}
+function announce(text){ui.announcement.textContent=text;ui.announcement.classList.add("visible");announceTimer=1.7}
+function draw(){ctx.clearRect(0,0,960,540);ctx.save();if(shake)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);const g=ctx.createLinearGradient(0,0,0,540);g.addColorStop(0,"#161b24");g.addColorStop(1,"#07090d");ctx.fillStyle=g;ctx.fillRect(0,0,960,540);drawArena();enemies.forEach(drawEnemy);drawPlayer();slashes.forEach(drawSlash);particles.forEach(drawParticle);ctx.restore();requestAnimationFrame(loop)}
+function drawArena(){ctx.fillStyle="#1b2028";ctx.fillRect(arena.x,arena.y,arena.width,arena.height);ctx.strokeStyle="#555b67";ctx.lineWidth=3;ctx.strokeRect(arena.x,arena.y,arena.width,arena.height);ctx.strokeStyle="#d6ae5d18";ctx.lineWidth=1;for(let x=arena.x+40;x<arena.x+arena.width;x+=40){ctx.beginPath();ctx.moveTo(x,arena.y);ctx.lineTo(x,arena.y+arena.height);ctx.stroke()}for(let y=arena.y+40;y<arena.y+arena.height;y+=40){ctx.beginPath();ctx.moveTo(arena.x,y);ctx.lineTo(arena.x+arena.width,y);ctx.stroke()}for(const [x,y] of [[75,75],[865,75],[75,445],[865,445]]){ctx.fillStyle="#303640";ctx.fillRect(x,y,20,20);ctx.strokeStyle="#75633e";ctx.strokeRect(x,y,20,20)}}
+function drawPlayer(){ctx.save();ctx.translate(player.x,player.y);ctx.rotate(Math.atan2(player.facingY,player.facingX));if(player.invulnerable)ctx.globalAlpha=.5+Math.sin(performance.now()*.04)*.25;ctx.fillStyle="#151920";ctx.beginPath();ctx.moveTo(-16,-15);ctx.lineTo(16,-12);ctx.lineTo(19,10);ctx.lineTo(0,21);ctx.lineTo(-19,10);ctx.closePath();ctx.fill();ctx.strokeStyle="#d6ae5d";ctx.lineWidth=3;ctx.stroke();ctx.fillStyle="#43d294";ctx.fillRect(5,-7,4,4);ctx.strokeStyle="#d9dce2";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(36,0);ctx.stroke();ctx.fillStyle="#7f2432";ctx.beginPath();ctx.arc(-15,2,11,-1.3,1.3);ctx.strokeStyle="#b89a5b";ctx.lineWidth=3;ctx.stroke();ctx.restore()}
+function drawEnemy(e){ctx.save();ctx.translate(e.x,e.y);const flash=e.flash>0;if(e.type==="boss"){ctx.rotate(Math.sin(e.phase)*.08);ctx.fillStyle=flash?"#eee4d5":"#3a1721";ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,r=i%2?25:34;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r)}ctx.closePath();ctx.fill();ctx.strokeStyle="#d6ae5d";ctx.lineWidth=4;ctx.stroke();ctx.fillStyle="#f1c75d";ctx.fillRect(-12,-5,8,5);ctx.fillRect(4,-5,8,5)}
+else if(e.type==="archer"){ctx.fillStyle=flash?"#eee4d5":"#71462d";ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(15,14);ctx.lineTo(-15,14);ctx.closePath();ctx.fill();ctx.strokeStyle="#d8a45e";ctx.stroke();ctx.fillStyle="#f0c868";ctx.fillRect(-6,-6,4,3);ctx.fillRect(2,-6,4,3)}
+else{ctx.fillStyle=flash?"#eee4d5":"#6f2938";ctx.beginPath();ctx.moveTo(0,-19);ctx.lineTo(17,-5);ctx.lineTo(13,17);ctx.lineTo(-13,17);ctx.lineTo(-17,-5);ctx.closePath();ctx.fill();ctx.strokeStyle="#1b0d11";ctx.lineWidth=3;ctx.stroke();ctx.fillStyle="#e8bf59";ctx.fillRect(-7,-6,5,3);ctx.fillRect(2,-6,5,3)}
+const w=e.type==="boss"?70:36;ctx.fillStyle="#090a0d";ctx.fillRect(-w/2,-e.radius-13,w,5);ctx.fillStyle=e.type==="boss"?"#d09b3f":"#b53a4b";ctx.fillRect(-w/2,-e.radius-13,w*Math.max(0,e.health/e.maxHealth),5);ctx.restore()}
+function drawSlash(s){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.angle);ctx.globalAlpha=s.life/.16;ctx.strokeStyle="#f2d58a";ctx.lineWidth=8;ctx.beginPath();ctx.arc(0,0,58,-.72,.72);ctx.stroke();ctx.restore()}
+function drawParticle(p){ctx.globalAlpha=Math.max(0,Math.min(1,p.life*2));ctx.fillStyle=p.color;if(p.projectile){ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill()}else ctx.fillRect(p.x,p.y,p.size,p.size);ctx.globalAlpha=1}
+function updateHud(){ui.healthBar.style.width=`${player.health/player.maxHealth*100}%`;ui.staminaBar.style.width=`${player.stamina/player.maxStamina*100}%`;ui.healthText.textContent=`${Math.ceil(player.health)}/${Math.ceil(player.maxHealth)}`;ui.staminaText.textContent=`${Math.ceil(player.stamina)}/${Math.ceil(player.maxStamina)}`;ui.roomNumber.textContent=room;ui.souls.textContent=souls;ui.kills.textContent=kills}
+function togglePause(){if(!running&& !paused)return;paused=!paused;ui.pauseScreen.classList.toggle("visible",paused)}
+function loop(t){const dt=Math.min((t-lastTime)/1000||0,.033);lastTime=t;update(dt);draw()}
+document.addEventListener("keydown",e=>{if(e.code==="KeyP"){togglePause();return}keys.add(e.code);if(e.code==="Space"){e.preventDefault();attack()}if(e.code==="ShiftLeft"||e.code==="ShiftRight")dodge()});document.addEventListener("keyup",e=>keys.delete(e.code));
+document.getElementById("startButton").onclick=startRun;document.getElementById("restartButton").onclick=startRun;document.getElementById("resumeButton").onclick=togglePause;
+document.querySelectorAll("[data-key]").forEach(b=>{const code=b.dataset.key;const press=e=>{e.preventDefault();keys.add(code);if(code==="Space")attack();if(code==="ShiftLeft")dodge()},release=e=>{e.preventDefault();keys.delete(code)};b.addEventListener("pointerdown",press);["pointerup","pointercancel","pointerleave"].forEach(x=>b.addEventListener(x,release))});
+updateHud();requestAnimationFrame(loop);

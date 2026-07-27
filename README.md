@@ -1,33 +1,26 @@
-# Project Eclipse 2D
+# Project Eclipse 2D — v0.2
 
-Primo prototipo browser del roguelike dark fantasy.
+Aggiornamento del prototipo browser dark fantasy.
 
-## Come avviarlo
+## Novità
 
-1. Estrai il file ZIP.
-2. Apri la cartella.
-3. Fai doppio clic su `index.html`.
-4. Il gioco si aprirà nel browser.
+- Grafica dei personaggi ridisegnata direttamente su Canvas
+- Due nemici normali: Cavaliere Vuoto e Arciere
+- Boss ogni 5 stanze: Custode dell'Eclissi
+- Sei Reliquie casuali
+- Colpi critici e furto vita
+- Contatore uccisioni
+- Riepilogo della run
+- Pausa con il tasto P
+- Effetti particellari e tremolio dello schermo
+- Controlli PC e touch
 
-## Comandi PC
+## Comandi
 
 - WASD o frecce: movimento
 - Spazio: attacco
 - Shift: schivata
+- P: pausa
 
-## Mobile
-
-I controlli touch appaiono automaticamente su telefono e tablet.
-
-## Contenuto attuale
-
-- Arena 2D
-- Vita e stamina
-- Attacco corpo a corpo
-- Schivata con invulnerabilità
-- Nemici progressivamente più forti
-- Frammenti d'Anima
-- Scelta di un potenziamento dopo ogni stanza
-- Game over e nuova run
-
-Non richiede installazioni, librerie o asset esterni.
+Per pubblicare l'aggiornamento su GitHub, sostituire i file `index.html`,
+`style.css` e `game.js` presenti nella radice del repository.
