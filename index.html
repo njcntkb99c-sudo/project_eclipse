@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta name="theme-color" content="#07080c">
-  <title>Project Eclipse — v0.4 Procedural Edition</title>
+  <title>Project Eclipse — v0.5 Eclipse Ascendant</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main class="game-shell">
   <header class="topbar">
-    <div class="logo"><strong>PROJECT ECLIPSE</strong><span>v0.4 · Procedural Edition</span></div>
+    <div class="logo"><strong>PROJECT ECLIPSE</strong><span>v0.5 · Eclipse Ascendant</span></div>
     <div class="stats">
       <div class="stat-row"><span>Vita</span><div class="bar"><i id="healthBar" class="health"></i></div><b id="healthText">120/120</b></div>
       <div class="stat-row"><span>Stamina</span><div class="bar"><i id="staminaBar" class="stamina"></i></div><b id="staminaText">100/100</b></div>
@@ -19,14 +19,14 @@
     <div class="run-data">
       <span>Stanza <b id="roomNumber">1</b></span>
       <span>Monete <b id="coins">0</b></span>
-      <span>Anime <b id="souls">0</b></span>
+      <span>Anime <b id="souls">0</b></span><span>Bioma <b id="biomeName">Cripta</b></span>
     </div>
   </header>
 
   <section class="game-frame">
     <canvas id="gameCanvas" width="960" height="540"></canvas>
     <aside id="minimap" class="minimap"></aside>
-    <div id="toast" class="toast"></div>
+    <div id="toast" class="toast"></div><div id="comboDisplay" class="combo-display">COMBO ×<b id="comboValue">0</b></div>
 
     <div id="mainMenu" class="overlay visible">
       <div class="panel title-panel">
@@ -35,7 +35,7 @@
         <p>Un roguelike dark fantasy procedurale. Ogni stanza cambia, ogni morte lascia un ricordo.</p>
         <button id="newRunButton">NUOVA RUN</button>
         <button id="continueButton" class="secondary">CONTINUA RUN</button>
-        <button id="settingsButton" class="secondary">IMPOSTAZIONI</button>
+        <button id="settingsButton" class="secondary">IMPOSTAZIONI</button><button id="codexButton" class="secondary">CODICE DELLE RELIQUIE</button>
         <div class="record">
           <span>Record stanza: <b id="bestRoom">0</b></span>
           <span>Miglior punteggio: <b id="bestScore">0</b></span>
@@ -58,6 +58,16 @@
         </label>
         <button id="fullscreenButton">SCHERMO INTERO</button>
         <button id="closeSettings" class="secondary">INDIETRO</button>
+      </div>
+    </div>
+
+
+    <div id="codexScreen" class="overlay">
+      <div class="panel">
+        <p class="eyebrow">ARCHIVIO DELL'ECLISSI</p>
+        <h2>Reliquie scoperte</h2>
+        <div id="codexGrid" class="reward-grid"></div>
+        <button id="closeCodex" class="secondary">INDIETRO</button>
       </div>
     </div>
 
@@ -124,7 +134,7 @@
     <span>Reliquie <b id="relicCount">0</b></span>
     <span>Pozioni <b id="potionCount">1</b></span>
     <span>Uccisioni <b id="kills">0</b></span>
-    <span>Abilità <b id="skillStatus">Pronta</b></span>
+    <span>Abilità <b id="skillStatus">Pronta</b></span><span>Maledizione <b id="curseStatus">Nessuna</b></span>
   </footer>
 </main>
 <script src="game.js"></script>

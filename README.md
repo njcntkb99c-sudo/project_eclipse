@@ -1,20 +1,16 @@
-# Project Eclipse 2D — v0.4 Procedural Edition
+# Project Eclipse 2D — v0.5 Eclipse Ascendant
 
-## Novità
+## Novità principali
 
-- Stanze generate proceduralmente
-- Ostacoli solidi con collisioni
-- Quattro tipi di nemici
-- Boss ogni cinque stanze
-- Sistema esperienza e livelli
-- Abilità speciale ad area
-- Menu principale
-- Impostazioni volume, difficoltà ed effetti
-- Modalità schermo intero
-- Salvataggio locale della run
-- Record stanza e miglior punteggio
-- Audio sintetizzato dal browser
-- Controlli PC e touch
+- Quattro biomi che cambiano ogni quattro stanze
+- Cripta del Ferro, Bosco Sepolto, Rovine Dorate e Abisso Violetto
+- Nemici élite più forti con aura dorata
+- Sistema combo: i colpi consecutivi aumentano il danno
+- Tre Maledizioni con vantaggi e penalità
+- Codice delle Reliquie con scoperte permanenti
+- Boss più aggressivi e crescita progressiva della difficoltà
+- Salvataggio di bioma, maledizione e progressione
+- Interfaccia aggiornata con bioma, combo e stato maledizione
 
 ## Comandi
 
@@ -25,7 +21,7 @@
 - Q: abilità speciale
 - P: pausa
 
-## Pubblicazione su GitHub Pages
+## Aggiornamento GitHub Pages
 
 Sostituisci nella radice del repository:
 
@@ -34,4 +30,6 @@ Sostituisci nella radice del repository:
 - game.js
 - README.md
 
-Poi conferma il commit. GitHub Pages aggiornerà automaticamente il gioco.
+Messaggio commit consigliato:
+
+`Aggiornamento Project Eclipse v0.5 Eclipse Ascendant`
