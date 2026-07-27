@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
   <meta name="theme-color" content="#07080c">
-  <title>Project Eclipse — v0.6 Oathbound</title>
+  <title>Project Eclipse — v0.7 Cloudbound</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main class="game-shell">
   <header class="topbar">
-    <div class="logo"><strong>PROJECT ECLIPSE</strong><span>v0.6 · Oathbound</span></div>
+    <div class="logo"><strong>PROJECT ECLIPSE</strong><span>v0.7 · Cloudbound</span></div>
     <div class="stats">
       <div class="stat-row"><span>Vita</span><div class="bar"><i id="healthBar" class="health"></i></div><b id="healthText">120/120</b></div>
       <div class="stat-row"><span>Stamina</span><div class="bar"><i id="staminaBar" class="stamina"></i></div><b id="staminaText">100/100</b></div>
@@ -19,7 +19,7 @@
     <div class="run-data">
       <span>Stanza <b id="roomNumber">1</b></span>
       <span>Monete <b id="coins">0</b></span>
-      <span>Anime <b id="souls">0</b></span><span>Bioma <b id="biomeName">Cripta</b></span><span>Essenza <b id="essence">0</b></span>
+      <span>Anime <b id="souls">0</b></span><span>Bioma <b id="biomeName">Cripta</b></span><span>Essenza <b id="essence">0</b></span><span>Account <b id="accountIndicator">Ospite</b></span>
     </div>
   </header>
 
@@ -35,7 +35,7 @@
         <p>Un roguelike dark fantasy procedurale. Ogni stanza cambia, ogni morte lascia un ricordo.</p>
         <button id="newRunButton">NUOVA RUN</button>
         <button id="continueButton" class="secondary">CONTINUA RUN</button>
-        <button id="settingsButton" class="secondary">IMPOSTAZIONI</button><button id="codexButton" class="secondary">CODICE DELLE RELIQUIE</button><button id="legacyButton" class="secondary">ALTARE DELL’EREDITÀ</button><button id="storyButton" class="secondary">STORIA</button>
+        <button id="settingsButton" class="secondary">IMPOSTAZIONI</button><button id="codexButton" class="secondary">CODICE DELLE RELIQUIE</button><button id="legacyButton" class="secondary">ALTARE DELL’EREDITÀ</button><button id="storyButton" class="secondary">STORIA</button><button id="accountButton" class="secondary">ACCOUNT E SALVATAGGIO CLOUD</button>
         <div class="record">
           <span>Record stanza: <b id="bestRoom">0</b></span>
           <span>Miglior punteggio: <b id="bestScore">0</b></span>
@@ -44,6 +44,46 @@
       </div>
     </div>
 
+
+
+    <div id="accountScreen" class="overlay">
+      <div class="panel account-panel">
+        <p class="eyebrow">ACCOUNT DEL GIURATO</p>
+        <h2 id="accountTitle">Accedi</h2>
+
+        <div id="loggedOutArea">
+          <label class="account-field">
+            <span>Email</span>
+            <input id="accountEmail" type="email" autocomplete="email" placeholder="nome@email.it">
+          </label>
+          <label class="account-field">
+            <span>Password</span>
+            <input id="accountPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Minimo 6 caratteri">
+          </label>
+          <div class="account-actions">
+            <button id="loginButton">ACCEDI</button>
+            <button id="registerButton" class="secondary">REGISTRATI</button>
+          </div>
+          <button id="resetPasswordButton" class="text-button">Password dimenticata?</button>
+          <p class="account-note">Dopo la registrazione potrebbe essere necessario confermare l’email.</p>
+        </div>
+
+        <div id="loggedInArea" class="hidden">
+          <p>Accesso effettuato come:</p>
+          <strong id="accountUserEmail"></strong>
+          <div class="cloud-status">
+            <span>Stato cloud</span>
+            <b id="cloudStatus">Non sincronizzato</b>
+          </div>
+          <button id="uploadSaveButton">SALVA PROGRESSI NEL CLOUD</button>
+          <button id="downloadSaveButton" class="secondary">SCARICA PROGRESSI DAL CLOUD</button>
+          <button id="logoutButton" class="danger-button">ESCI DALL’ACCOUNT</button>
+        </div>
+
+        <p id="accountMessage" class="account-message"></p>
+        <button id="closeAccount" class="secondary">INDIETRO</button>
+      </div>
+    </div>
 
     <div id="storyScreen" class="overlay">
       <div class="panel story-panel">
@@ -168,6 +208,9 @@
     <span>Abilità <b id="skillStatus">Pronta</b></span><span>Maledizione <b id="curseStatus">Nessuna</b></span><span>Missioni <b id="missionsDone">0</b></span>
   </footer>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="cloud-config.js"></script>
+<script src="cloud-save.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

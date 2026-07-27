@@ -1,5 +1,5 @@
 const C=document.getElementById("gameCanvas"),X=C.getContext("2d"),$=id=>document.getElementById(id);
-const ui={healthBar:$("healthBar"),staminaBar:$("staminaBar"),xpBar:$("xpBar"),healthText:$("healthText"),staminaText:$("staminaText"),levelText:$("levelText"),roomNumber:$("roomNumber"),coins:$("coins"),souls:$("souls"),kills:$("kills"),relicCount:$("relicCount"),potionCount:$("potionCount"),skillStatus:$("skillStatus"),curseStatus:$("curseStatus"),biomeName:$("biomeName"),essence:$("essence"),missionsDone:$("missionsDone"),comboDisplay:$("comboDisplay"),comboValue:$("comboValue"),questTracker:$("questTracker"),questName:$("questName"),questProgress:$("questProgress"),bossBanner:$("bossBanner"),bossName:$("bossName"),minimap:$("minimap"),toast:$("toast"),menu:$("mainMenu"),settings:$("settingsScreen"),story:$("storyScreen"),storyTitle:$("storyTitle"),storyText:$("storyText"),legacy:$("legacyScreen"),legacyGrid:$("legacyGrid"),legacyEssence:$("legacyEssence"),missionComplete:$("missionCompleteScreen"),missionCompleteTitle:$("missionCompleteTitle"),missionCompleteText:$("missionCompleteText"),codex:$("codexScreen"),codexGrid:$("codexGrid"),reward:$("rewardScreen"),shop:$("shopScreen"),level:$("levelScreen"),pause:$("pauseScreen"),over:$("gameOverScreen"),rewardGrid:$("rewardGrid"),shopGrid:$("shopGrid"),levelGrid:$("levelGrid"),shopCoins:$("shopCoins"),summary:$("runSummary"),continueButton:$("continueButton"),bestRoom:$("bestRoom"),bestScore:$("bestScore"),volume:$("volumeSlider"),effects:$("effectsToggle"),difficulty:$("difficultySelect")};
+const ui={healthBar:$("healthBar"),staminaBar:$("staminaBar"),xpBar:$("xpBar"),healthText:$("healthText"),staminaText:$("staminaText"),levelText:$("levelText"),roomNumber:$("roomNumber"),coins:$("coins"),souls:$("souls"),kills:$("kills"),relicCount:$("relicCount"),potionCount:$("potionCount"),skillStatus:$("skillStatus"),curseStatus:$("curseStatus"),biomeName:$("biomeName"),essence:$("essence"),accountIndicator:$("accountIndicator"),missionsDone:$("missionsDone"),comboDisplay:$("comboDisplay"),comboValue:$("comboValue"),questTracker:$("questTracker"),questName:$("questName"),questProgress:$("questProgress"),bossBanner:$("bossBanner"),bossName:$("bossName"),minimap:$("minimap"),toast:$("toast"),menu:$("mainMenu"),settings:$("settingsScreen"),account:$("accountScreen"),accountTitle:$("accountTitle"),accountEmail:$("accountEmail"),accountPassword:$("accountPassword"),accountMessage:$("accountMessage"),loggedOutArea:$("loggedOutArea"),loggedInArea:$("loggedInArea"),accountUserEmail:$("accountUserEmail"),cloudStatus:$("cloudStatus"),story:$("storyScreen"),storyTitle:$("storyTitle"),storyText:$("storyText"),legacy:$("legacyScreen"),legacyGrid:$("legacyGrid"),legacyEssence:$("legacyEssence"),missionComplete:$("missionCompleteScreen"),missionCompleteTitle:$("missionCompleteTitle"),missionCompleteText:$("missionCompleteText"),codex:$("codexScreen"),codexGrid:$("codexGrid"),reward:$("rewardScreen"),shop:$("shopScreen"),level:$("levelScreen"),pause:$("pauseScreen"),over:$("gameOverScreen"),rewardGrid:$("rewardGrid"),shopGrid:$("shopGrid"),levelGrid:$("levelGrid"),shopCoins:$("shopCoins"),summary:$("runSummary"),continueButton:$("continueButton"),bestRoom:$("bestRoom"),bestScore:$("bestScore"),volume:$("volumeSlider"),effects:$("effectsToggle"),difficulty:$("difficultySelect")};
 const keys=new Set(),A={x:54,y:54,w:C.width-108,h:C.height-108};
 let state="menu",room=1,coins=0,souls=0,kills=0,potions=1,relics=[],enemies=[],shots=[],drops=[],particles=[],obstacles=[],last=0,shake=0,toastTimer,shopBought=new Set(),settings=loadSettings(),combo=0,comboTimer=0,curse=null,biome="crypt",quest=null,missionsDone=0,storyIndex=0,pendingMissionReward=null;
 const P={x:480,y:270,r:15,speed:205,maxHp:120,hp:120,maxSt:100,st:100,dmg:22,atkCd:0,dodgeCd:0,inv:0,dodge:0,fx:1,fy:0,crit:.08,lifeSteal:0,armor:0,level:1,xp:0,nextXp:35,skillCd:0,comboBonus:0};
@@ -58,6 +58,39 @@ const BOSS_NAMES={
  ruins:"Re Senza Corona",
  abyss:"Araldo del Vuoto"
 };
+
+
+function accountMessage(text,type=""){
+  ui.accountMessage.textContent=text;
+  ui.accountMessage.className="account-message "+type;
+}
+function refreshAccountUI(user=window.EclipseCloud?.getUser?.()){
+  const logged=!!user;
+  ui.loggedOutArea.classList.toggle("hidden",logged);
+  ui.loggedInArea.classList.toggle("hidden",!logged);
+  ui.accountTitle.textContent=logged?"Account collegato":"Accedi";
+  ui.accountUserEmail.textContent=user?.email||"";
+  ui.accountIndicator.textContent=logged?(user.email.split("@")[0]||"Connesso"):"Ospite";
+  ui.cloudStatus.textContent=logged?"Pronto":"Non collegato";
+}
+function openAccount(){
+  ui.menu.classList.remove("visible");
+  ui.account.classList.add("visible");
+  refreshAccountUI();
+  if(!window.EclipseCloud?.configured){
+    accountMessage("Configura prima Supabase nel file cloud-config.js.","error");
+  }else accountMessage("");
+}
+async function accountAction(button,fn){
+  const old=button.textContent;
+  button.disabled=true;
+  button.textContent="ATTENDI...";
+  try{await fn()}catch(error){accountMessage(error.message||"Operazione non riuscita.","error")}
+  finally{button.disabled=false;button.textContent=old}
+}
+window.addEventListener("eclipse-cloud-ready",e=>refreshAccountUI(e.detail.user));
+window.addEventListener("eclipse-auth-change",e=>refreshAccountUI(e.detail.user));
+window.addEventListener("eclipse-cloud-error",e=>accountMessage(e.detail.message,"error"));
 
 function loadMeta(){try{return Object.assign({essence:0,legacy:{}},JSON.parse(localStorage.getItem("eclipseMeta")||"{}"))}catch{return{essence:0,legacy:{}}}}
 function saveMeta(meta){localStorage.setItem("eclipseMeta",JSON.stringify(meta))}
@@ -141,7 +174,7 @@ function loadRun(){let s;try{s=JSON.parse(localStorage.getItem("eclipseSave"))}c
 function clearSave(){localStorage.removeItem("eclipseSave")}
 function reset(){room=1;coins=0;souls=0;kills=0;potions=1;relics=[];combo=0;comboTimer=0;curse=null;biome="crypt";quest=null;missionsDone=0;Object.assign(P,{x:480,y:270,speed:205,maxHp:120,hp:120,maxSt:100,st:100,dmg:22,atkCd:0,dodgeCd:0,inv:0,dodge:0,fx:1,fy:0,crit:.08,lifeSteal:0,armor:0,level:1,xp:0,nextXp:35,skillCd:0,skillRate:1,comboBonus:0,xpMult:1});applyLegacy();createQuest();spawn();hud()}
 function newRun(skipStory=false){if(!skipStory&&!localStorage.getItem("eclipseStorySeen")){startStory(false);return}clearSave();reset();hide();state="play";beep(220,.08)}
-function hide(){[ui.menu,ui.settings,ui.story,ui.legacy,ui.missionComplete,ui.codex,ui.reward,ui.shop,ui.level,ui.pause,ui.over].forEach(e=>e.classList.remove("visible"))}
+function hide(){[ui.menu,ui.settings,ui.account,ui.story,ui.legacy,ui.missionComplete,ui.codex,ui.reward,ui.shop,ui.level,ui.pause,ui.over].forEach(e=>e.classList.remove("visible"))}
 function spawn(){enemies=[];shots=[];drops=[];shopBought.clear();chooseBiome();generateRoom();P.x=480;P.y=270;let boss=room%5===0;if(boss){enemies.push(makeEnemy("boss",480,145));showBossBanner();note((BOSS_NAMES[biome]||"Il Custode")+" è apparso");return}let n=Math.min(2+Math.floor(room*.72),9);for(let i=0;i<n;i++){let p=randomFree(170),roll=Math.random(),t=roll<.18?"mage":roll<.48?"archer":"knight";enemies.push(makeEnemy(t,p.x,p.y))}}
 function generateRoom(){obstacles=[];let count=2+Math.floor(Math.random()*4);for(let i=0;i<count;i++){for(let tries=0;tries<30;tries++){let w=45+Math.floor(Math.random()*70),h=35+Math.floor(Math.random()*65),x=A.x+70+Math.random()*(A.w-w-140),y=A.y+70+Math.random()*(A.h-h-140),o={x,y,w,h};if(Math.hypot(x+w/2-480,y+h/2-270)>130&&!obstacles.some(q=>rectHit(o,q,25))){obstacles.push(o);break}}}}
 function rectHit(a,b,p=0){return a.x-p<b.x+b.w&&a.x+a.w+p>b.x&&a.y-p<b.y+b.h&&a.y+a.h+p>b.y}
@@ -194,7 +227,47 @@ function drawShot(s){X.fillStyle=s.color||"#a47cd1";X.beginPath();X.arc(s.x,s.y,
 function drawDrop(d){X.fillStyle=d.type==="coin"?"#e0b84d":"#46d49a";X.fillRect(d.x-4,d.y-4,8,8)}
 function loop(t){let dt=Math.min((t-last)/1000||0,.033);last=t;update(dt);draw()}
 document.addEventListener("keydown",e=>{keys.add(e.code);if(e.code==="Space"){e.preventDefault();attack()}if(e.code.startsWith("Shift"))dodge();if(e.code==="KeyE")drink();if(e.code==="KeyQ")skill();if(e.code==="KeyP")togglePause()});document.addEventListener("keyup",e=>keys.delete(e.code));
-$("newRunButton").onclick=newRun;ui.continueButton.onclick=loadRun;$("settingsButton").onclick=()=>{ui.menu.classList.remove("visible");ui.settings.classList.add("visible")};$("codexButton").onclick=openCodex;$("closeCodex").onclick=()=>{ui.codex.classList.remove("visible");ui.menu.classList.add("visible")};$("legacyButton").onclick=openLegacy;$("closeLegacy").onclick=()=>{ui.legacy.classList.remove("visible");ui.menu.classList.add("visible")};$("storyButton").onclick=()=>startStory(true);$("storyNextButton").onclick=nextStory;$("closeStoryButton").onclick=()=>{ui.story.classList.remove("visible");ui.menu.classList.add("visible")};$("claimMissionButton").onclick=claimMission;$("closeSettings").onclick=()=>{saveSettings();ui.settings.classList.remove("visible");ui.menu.classList.add("visible")};$("fullscreenButton").onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();$("resumeButton").onclick=togglePause;$("saveQuitButton").onclick=saveQuit;$("restartButton").onclick=newRun;$("menuButton").onclick=backMenu;$("leaveShop").onclick=leaveShop;
+$("newRunButton").onclick=newRun;ui.continueButton.onclick=loadRun;$("settingsButton").onclick=()=>{ui.menu.classList.remove("visible");ui.settings.classList.add("visible")};$("accountButton").onclick=openAccount;
+$("closeAccount").onclick=()=>{ui.account.classList.remove("visible");ui.menu.classList.add("visible");record()};
+$("loginButton").onclick=()=>accountAction($("loginButton"),async()=>{
+ const email=ui.accountEmail.value.trim(),password=ui.accountPassword.value;
+ if(!email||!password)throw new Error("Inserisci email e password.");
+ await window.EclipseCloud.login(email,password);
+ refreshAccountUI();
+ accountMessage("Accesso effettuato.","success");
+});
+$("registerButton").onclick=()=>accountAction($("registerButton"),async()=>{
+ const email=ui.accountEmail.value.trim(),password=ui.accountPassword.value;
+ if(!email||password.length<6)throw new Error("Inserisci un’email valida e una password di almeno 6 caratteri.");
+ await window.EclipseCloud.register(email,password);
+ accountMessage("Registrazione completata. Controlla la tua email per confermare l’account.","success");
+});
+$("resetPasswordButton").onclick=()=>accountAction($("resetPasswordButton"),async()=>{
+ const email=ui.accountEmail.value.trim();
+ if(!email)throw new Error("Inserisci prima la tua email.");
+ await window.EclipseCloud.resetPassword(email);
+ accountMessage("Email per reimpostare la password inviata.","success");
+});
+$("logoutButton").onclick=()=>accountAction($("logoutButton"),async()=>{
+ await window.EclipseCloud.logout();
+ refreshAccountUI(null);
+ accountMessage("Disconnessione completata.","success");
+});
+$("uploadSaveButton").onclick=()=>accountAction($("uploadSaveButton"),async()=>{
+ ui.cloudStatus.textContent="Sincronizzazione...";
+ const when=await window.EclipseCloud.upload();
+ ui.cloudStatus.textContent="Salvato";
+ accountMessage("Progressi caricati nel cloud.","success");
+});
+$("downloadSaveButton").onclick=()=>accountAction($("downloadSaveButton"),async()=>{
+ if(!confirm("Sostituire i progressi presenti su questo dispositivo con quelli cloud?"))return;
+ ui.cloudStatus.textContent="Download...";
+ await window.EclipseCloud.download();
+ ui.cloudStatus.textContent="Scaricato";
+ accountMessage("Progressi cloud scaricati. Ricarico il gioco...","success");
+ setTimeout(()=>location.reload(),700);
+});
+$("codexButton").onclick=openCodex;$("closeCodex").onclick=()=>{ui.codex.classList.remove("visible");ui.menu.classList.add("visible")};$("legacyButton").onclick=openLegacy;$("closeLegacy").onclick=()=>{ui.legacy.classList.remove("visible");ui.menu.classList.add("visible")};$("storyButton").onclick=()=>startStory(true);$("storyNextButton").onclick=nextStory;$("closeStoryButton").onclick=()=>{ui.story.classList.remove("visible");ui.menu.classList.add("visible")};$("claimMissionButton").onclick=claimMission;$("closeSettings").onclick=()=>{saveSettings();ui.settings.classList.remove("visible");ui.menu.classList.add("visible")};$("fullscreenButton").onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();$("resumeButton").onclick=togglePause;$("saveQuitButton").onclick=saveQuit;$("restartButton").onclick=newRun;$("menuButton").onclick=backMenu;$("leaveShop").onclick=leaveShop;
 [ui.volume,ui.effects,ui.difficulty].forEach(e=>e.addEventListener("change",saveSettings));
 document.querySelectorAll("[data-key]").forEach(b=>{let code=b.dataset.key,down=e=>{e.preventDefault();keys.add(code);if(code==="Space")attack();if(code==="ShiftLeft")dodge();if(code==="KeyE")drink();if(code==="KeyQ")skill()},up=e=>{e.preventDefault();keys.delete(code)};b.addEventListener("pointerdown",down);["pointerup","pointercancel","pointerleave"].forEach(n=>b.addEventListener(n,up))});
 applySettings();record();hud();requestAnimationFrame(loop);

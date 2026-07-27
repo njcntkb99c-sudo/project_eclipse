@@ -1,36 +1,26 @@
-# Project Eclipse 2D — v0.6 Oathbound
+# Project Eclipse — v0.7 Cloudbound
 
-## Novità principali
+## Novità
 
-- Prologo narrativo in tre capitoli
-- Missioni casuali durante ogni run
-- Ricompense missione: monete, pozioni, cure ed Essenza
-- Essenza permanente ottenuta anche alla morte
-- Altare dell’Eredità con quattro potenziamenti permanenti
-- Vita, danno, monete iniziali ed esperienza migliorabili
-- Boss con nomi diversi per ogni bioma
-- Banner di ingresso dei boss
-- Salvataggio delle missioni e della progressione
-- Interfaccia aggiornata con missione, Essenza e missioni completate
+- Registrazione tramite email e password
+- Accesso allo stesso account da più dispositivi
+- Conferma email
+- Recupero password
+- Salvataggio manuale nel cloud
+- Download dei progressi cloud
+- Salvataggio locale ancora disponibile per gli ospiti
+- Sincronizzazione di run, Essenza, record, Reliquie, Altare, storia e impostazioni
+- Protezione dei salvataggi con Supabase Row Level Security
 
-## Comandi
+## File aggiunti
 
-- WASD o frecce: movimento
-- Spazio: attacco
-- Shift: schivata
-- E: pozione
-- Q: abilità speciale
-- P: pausa
+- `cloud-config.js`
+- `cloud-save.js`
+- `supabase-setup.sql`
+- `CONFIGURAZIONE-CLOUD.md`
 
-## Pubblicazione su GitHub Pages
+## Prima della pubblicazione
 
-Sostituisci nella radice del repository:
+Segui `CONFIGURAZIONE-CLOUD.md` e inserisci Project URL e chiave pubblica nel file `cloud-config.js`.
 
-- index.html
-- style.css
-- game.js
-- README.md
-
-Messaggio commit consigliato:
-
-`Aggiornamento Project Eclipse v0.6 Oathbound`
+Non inserire mai la chiave Supabase `service_role`.
