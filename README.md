@@ -1,36 +1,37 @@
-# Project Eclipse 2D — v0.3 Pixel Art Edition
+# Project Eclipse 2D — v0.4 Procedural Edition
 
-Versione browser del roguelike dark fantasy.
+## Novità
 
-## Novità principali
-
-- Nuova grafica pixel-art disegnata via Canvas
-- Cavaliere Vuoto, Arciere e boss Custode dell'Eclissi
-- Boss ogni 5 stanze con seconda fase
-- Mini-mappa
-- Monete, Anime e Mercante ogni 3 stanze
-- Pozioni curative
-- Otto Reliquie
-- Colpi critici, furto vita, armatura e bonus velocità
-- Effetti particellari e tremolio dello schermo
+- Stanze generate proceduralmente
+- Ostacoli solidi con collisioni
+- Quattro tipi di nemici
+- Boss ogni cinque stanze
+- Sistema esperienza e livelli
+- Abilità speciale ad area
+- Menu principale
+- Impostazioni volume, difficoltà ed effetti
+- Modalità schermo intero
+- Salvataggio locale della run
+- Record stanza e miglior punteggio
+- Audio sintetizzato dal browser
 - Controlli PC e touch
-- Riepilogo completo della run
 
 ## Comandi
 
 - WASD o frecce: movimento
 - Spazio: attacco
 - Shift: schivata
-- E: usa pozione
+- E: pozione
+- Q: abilità speciale
 - P: pausa
 
-## Pubblicazione
+## Pubblicazione su GitHub Pages
 
-Sostituisci nella radice del repository GitHub:
+Sostituisci nella radice del repository:
 
-- `index.html`
-- `style.css`
-- `game.js`
-- `README.md`
+- index.html
+- style.css
+- game.js
+- README.md
 
-GitHub Pages aggiornerà automaticamente il gioco.
+Poi conferma il commit. GitHub Pages aggiornerà automaticamente il gioco.

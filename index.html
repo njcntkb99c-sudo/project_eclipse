@@ -3,99 +3,130 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <meta name="theme-color" content="#08090d">
-  <title>Project Eclipse — v0.3 Pixel Art Edition</title>
+  <meta name="theme-color" content="#07080c">
+  <title>Project Eclipse — v0.4 Procedural Edition</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="game-shell">
-    <header class="topbar">
-      <div class="logo">
-        <strong>PROJECT ECLIPSE</strong>
-        <span>v0.3 · Pixel Art Edition</span>
-      </div>
+<main class="game-shell">
+  <header class="topbar">
+    <div class="logo"><strong>PROJECT ECLIPSE</strong><span>v0.4 · Procedural Edition</span></div>
+    <div class="stats">
+      <div class="stat-row"><span>Vita</span><div class="bar"><i id="healthBar" class="health"></i></div><b id="healthText">120/120</b></div>
+      <div class="stat-row"><span>Stamina</span><div class="bar"><i id="staminaBar" class="stamina"></i></div><b id="staminaText">100/100</b></div>
+      <div class="stat-row"><span>Esperienza</span><div class="bar"><i id="xpBar" class="xp"></i></div><b id="levelText">Lv. 1</b></div>
+    </div>
+    <div class="run-data">
+      <span>Stanza <b id="roomNumber">1</b></span>
+      <span>Monete <b id="coins">0</b></span>
+      <span>Anime <b id="souls">0</b></span>
+    </div>
+  </header>
 
-      <div class="stats">
-        <div class="stat-row"><span>Vita</span><div class="bar"><i id="healthBar" class="health"></i></div><b id="healthText">120/120</b></div>
-        <div class="stat-row"><span>Stamina</span><div class="bar"><i id="staminaBar" class="stamina"></i></div><b id="staminaText">100/100</b></div>
-      </div>
+  <section class="game-frame">
+    <canvas id="gameCanvas" width="960" height="540"></canvas>
+    <aside id="minimap" class="minimap"></aside>
+    <div id="toast" class="toast"></div>
 
-      <div class="run-data">
-        <span>Stanza <b id="roomNumber">1</b></span>
-        <span>Monete <b id="coins">0</b></span>
-        <span>Anime <b id="souls">0</b></span>
-      </div>
-    </header>
-
-    <section class="game-frame">
-      <canvas id="gameCanvas" width="960" height="540"></canvas>
-
-      <aside id="minimap" class="minimap" aria-label="Mini mappa"></aside>
-
-      <div id="startScreen" class="overlay visible">
-        <div class="panel title-panel">
-          <p class="eyebrow">L'ULTIMO GIURATO</p>
-          <h1>Project Eclipse</h1>
-          <p>Attraversa le Terre del Ferro Piangente, affronta gli Infranti e ricostruisci il tuo giuramento.</p>
-          <button id="startButton">INIZIA LA RUN</button>
-          <small>WASD/Frecce: movimento · Spazio: attacco · Shift: schivata · E: pozione · P: pausa</small>
+    <div id="mainMenu" class="overlay visible">
+      <div class="panel title-panel">
+        <p class="eyebrow">LE TERRE DEL FERRO PIANGENTE</p>
+        <h1>Project Eclipse</h1>
+        <p>Un roguelike dark fantasy procedurale. Ogni stanza cambia, ogni morte lascia un ricordo.</p>
+        <button id="newRunButton">NUOVA RUN</button>
+        <button id="continueButton" class="secondary">CONTINUA RUN</button>
+        <button id="settingsButton" class="secondary">IMPOSTAZIONI</button>
+        <div class="record">
+          <span>Record stanza: <b id="bestRoom">0</b></span>
+          <span>Miglior punteggio: <b id="bestScore">0</b></span>
         </div>
+        <small>WASD/Frecce · Spazio: attacco · Shift: schivata · E: pozione · Q: abilità · P: pausa</small>
       </div>
+    </div>
 
-      <div id="rewardScreen" class="overlay">
-        <div class="panel">
-          <p class="eyebrow">RELIQUIE DELL'ECLISSI</p>
-          <h2>Scegli una ricompensa</h2>
-          <div id="rewardGrid" class="reward-grid"></div>
-        </div>
+    <div id="settingsScreen" class="overlay">
+      <div class="panel compact">
+        <p class="eyebrow">IMPOSTAZIONI</p>
+        <h2>Preferenze</h2>
+        <label class="setting"><span>Volume</span><input id="volumeSlider" type="range" min="0" max="100" value="35"></label>
+        <label class="setting"><span>Effetti schermo</span><input id="effectsToggle" type="checkbox" checked></label>
+        <label class="setting"><span>Difficoltà</span>
+          <select id="difficultySelect">
+            <option value="normal">Normale</option>
+            <option value="hard">Difficile</option>
+          </select>
+        </label>
+        <button id="fullscreenButton">SCHERMO INTERO</button>
+        <button id="closeSettings" class="secondary">INDIETRO</button>
       </div>
+    </div>
 
-      <div id="shopScreen" class="overlay">
-        <div class="panel">
-          <p class="eyebrow">MERCANTE ERRANTE</p>
-          <h2>Il prezzo della speranza</h2>
-          <p class="shop-money">Monete disponibili: <b id="shopCoins">0</b></p>
-          <div id="shopGrid" class="reward-grid"></div>
-          <button id="leaveShop" class="secondary">Prosegui</button>
-        </div>
+    <div id="rewardScreen" class="overlay">
+      <div class="panel">
+        <p class="eyebrow">RELIQUIE DELL'ECLISSI</p>
+        <h2>Scegli una ricompensa</h2>
+        <div id="rewardGrid" class="reward-grid"></div>
       </div>
+    </div>
 
-      <div id="pauseScreen" class="overlay">
-        <div class="panel compact">
-          <p class="eyebrow">PAUSA</p>
-          <h2>Il tempo si è fermato</h2>
-          <button id="resumeButton">RIPRENDI</button>
-        </div>
+    <div id="shopScreen" class="overlay">
+      <div class="panel">
+        <p class="eyebrow">MERCANTE ERRANTE</p>
+        <h2>Il prezzo della speranza</h2>
+        <p>Monete disponibili: <b id="shopCoins">0</b></p>
+        <div id="shopGrid" class="reward-grid"></div>
+        <button id="leaveShop" class="secondary">PROSEGUI</button>
       </div>
+    </div>
 
-      <div id="gameOverScreen" class="overlay">
-        <div class="panel">
-          <p class="eyebrow danger">LA RUN È TERMINATA</p>
-          <h2>L'Infranto è caduto</h2>
-          <div id="runSummary" class="summary"></div>
-          <button id="restartButton">RIPROVA</button>
-        </div>
+    <div id="levelScreen" class="overlay">
+      <div class="panel compact">
+        <p class="eyebrow">ASCESA</p>
+        <h2>Livello aumentato</h2>
+        <div id="levelGrid" class="reward-grid single"></div>
       </div>
+    </div>
 
-      <div class="mobile-controls">
-        <div class="dpad">
-          <button data-key="ArrowUp">▲</button>
-          <div><button data-key="ArrowLeft">◀</button><button data-key="ArrowDown">▼</button><button data-key="ArrowRight">▶</button></div>
-        </div>
-        <div class="actions">
-          <button data-key="KeyE" class="potion-btn">Pozione</button>
-          <button data-key="ShiftLeft" class="dodge-btn">Schivata</button>
-          <button data-key="Space" class="attack-btn">Attacco</button>
-        </div>
+    <div id="pauseScreen" class="overlay">
+      <div class="panel compact">
+        <p class="eyebrow">PAUSA</p>
+        <h2>Il tempo si è fermato</h2>
+        <button id="resumeButton">RIPRENDI</button>
+        <button id="saveQuitButton" class="secondary">SALVA E TORNA AL MENU</button>
       </div>
-    </section>
+    </div>
 
-    <footer>
-      <span>Reliquie: <b id="relicCount">0</b></span>
-      <span>Pozioni: <b id="potionCount">1</b></span>
-      <span>Uccisioni: <b id="kills">0</b></span>
-    </footer>
-  </main>
-  <script src="game.js"></script>
+    <div id="gameOverScreen" class="overlay">
+      <div class="panel">
+        <p class="eyebrow danger">LA RUN È TERMINATA</p>
+        <h2>L'Infranto è caduto</h2>
+        <div id="runSummary" class="summary"></div>
+        <button id="restartButton">NUOVA RUN</button>
+        <button id="menuButton" class="secondary">MENU PRINCIPALE</button>
+      </div>
+    </div>
+
+    <div class="mobile-controls">
+      <div class="dpad">
+        <button data-key="ArrowUp">▲</button>
+        <div><button data-key="ArrowLeft">◀</button><button data-key="ArrowDown">▼</button><button data-key="ArrowRight">▶</button></div>
+      </div>
+      <div class="actions">
+        <button data-key="KeyE" class="small-action">Pozione</button>
+        <button data-key="KeyQ" class="small-action">Abilità</button>
+        <button data-key="ShiftLeft" class="dodge-btn">Schivata</button>
+        <button data-key="Space" class="attack-btn">Attacco</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Reliquie <b id="relicCount">0</b></span>
+    <span>Pozioni <b id="potionCount">1</b></span>
+    <span>Uccisioni <b id="kills">0</b></span>
+    <span>Abilità <b id="skillStatus">Pronta</b></span>
+  </footer>
+</main>
+<script src="game.js"></script>
 </body>
 </html>
