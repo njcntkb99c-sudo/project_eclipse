@@ -1,0 +1,33 @@
+PROJECT ECLIPSE 3.1 — SAFE BUILD
+
+QUESTA VERSIONE È PIÙ SEMPLICE DA CARICARE.
+
+STRUTTURA CORRETTA:
+
+index.html
+style.css
+game.js
+assets/
+  kael.png
+  soldato-corrotto.png
+  custode.png
+  bosco.png
+  tiles.png
+
+COME PUBBLICARLA SENZA TOCCARE LA VERSIONE ATTUALE:
+
+1. Nel repository crea una cartella chiamata v31
+2. Apri lo ZIP.
+3. Carica dentro v31:
+   - index.html
+   - style.css
+   - game.js
+   - tutta la cartella assets
+4. Attendi il pallino verde di GitHub Pages.
+5. Apri:
+   https://njcntkb99c-sudo.github.io/project_eclipse/v31/
+
+ATTENZIONE:
+Non rinominare game.js in index.html.
+Non caricare i file PNG fuori dalla cartella assets.
+Il file index.html deve iniziare con: <!doctype html>
