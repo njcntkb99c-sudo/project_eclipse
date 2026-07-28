@@ -1,273 +1,43 @@
-const C=document.getElementById("gameCanvas"),X=C.getContext("2d"),$=id=>document.getElementById(id);
-const ui={healthBar:$("healthBar"),staminaBar:$("staminaBar"),xpBar:$("xpBar"),healthText:$("healthText"),staminaText:$("staminaText"),levelText:$("levelText"),roomNumber:$("roomNumber"),coins:$("coins"),souls:$("souls"),kills:$("kills"),relicCount:$("relicCount"),potionCount:$("potionCount"),skillStatus:$("skillStatus"),curseStatus:$("curseStatus"),biomeName:$("biomeName"),essence:$("essence"),accountIndicator:$("accountIndicator"),missionsDone:$("missionsDone"),comboDisplay:$("comboDisplay"),comboValue:$("comboValue"),questTracker:$("questTracker"),questName:$("questName"),questProgress:$("questProgress"),bossBanner:$("bossBanner"),bossName:$("bossName"),minimap:$("minimap"),toast:$("toast"),menu:$("mainMenu"),settings:$("settingsScreen"),account:$("accountScreen"),accountTitle:$("accountTitle"),accountEmail:$("accountEmail"),accountPassword:$("accountPassword"),accountMessage:$("accountMessage"),loggedOutArea:$("loggedOutArea"),loggedInArea:$("loggedInArea"),accountUserEmail:$("accountUserEmail"),cloudStatus:$("cloudStatus"),story:$("storyScreen"),storyTitle:$("storyTitle"),storyText:$("storyText"),legacy:$("legacyScreen"),legacyGrid:$("legacyGrid"),legacyEssence:$("legacyEssence"),missionComplete:$("missionCompleteScreen"),missionCompleteTitle:$("missionCompleteTitle"),missionCompleteText:$("missionCompleteText"),codex:$("codexScreen"),codexGrid:$("codexGrid"),reward:$("rewardScreen"),shop:$("shopScreen"),level:$("levelScreen"),pause:$("pauseScreen"),over:$("gameOverScreen"),rewardGrid:$("rewardGrid"),shopGrid:$("shopGrid"),levelGrid:$("levelGrid"),shopCoins:$("shopCoins"),summary:$("runSummary"),continueButton:$("continueButton"),bestRoom:$("bestRoom"),bestScore:$("bestScore"),volume:$("volumeSlider"),effects:$("effectsToggle"),difficulty:$("difficultySelect")};
-const keys=new Set(),A={x:54,y:54,w:C.width-108,h:C.height-108};
-let state="menu",room=1,coins=0,souls=0,kills=0,potions=1,relics=[],enemies=[],shots=[],drops=[],particles=[],obstacles=[],last=0,shake=0,toastTimer,shopBought=new Set(),settings=loadSettings(),combo=0,comboTimer=0,curse=null,biome="crypt",quest=null,missionsDone=0,storyIndex=0,pendingMissionReward=null;
-const P={x:480,y:270,r:15,speed:205,maxHp:120,hp:120,maxSt:100,st:100,dmg:22,atkCd:0,dodgeCd:0,inv:0,dodge:0,fx:1,fy:0,crit:.08,lifeSteal:0,armor:0,level:1,xp:0,nextXp:35,skillCd:0,comboBonus:0};
-const RELICS=[
-{id:"steel",name:"Cuore d'Acciaio",desc:"+30 vita massima e cura completa.",apply(){P.maxHp+=30;P.hp=P.maxHp}},
-{id:"oath",name:"Lama del Giuramento",desc:"+7 danni permanenti.",apply(){P.dmg+=7}},
-{id:"breath",name:"Respiro dell'Infranto",desc:"+30 stamina massima.",apply(){P.maxSt+=30;P.st=P.maxSt}},
-{id:"fang",name:"Dente Cremisi",desc:"+8% probabilità critica.",apply(){P.crit+=.08}},
-{id:"chalice",name:"Calice del Martire",desc:"Recuperi il 6% dei danni inflitti.",apply(){P.lifeSteal+=.06}},
-{id:"plate",name:"Piastra del Re Caduto",desc:"Riduce i danni ricevuti di 3.",apply(){P.armor+=3}},
-{id:"wind",name:"Passo del Vento Nero",desc:"+12% velocità.",apply(){P.speed*=1.12}},
-{id:"ember",name:"Brace del Sole",desc:"+12 danni, ma -15 vita massima.",apply(){P.dmg+=12;P.maxHp=Math.max(55,P.maxHp-15);P.hp=Math.min(P.hp,P.maxHp)}},
-{id:"moon",name:"Sigillo Lunare",desc:"L'abilità speciale si ricarica più velocemente.",apply(){P.skillRate=(P.skillRate||1)*1.25}}
-];
-
-const BIOMES={
- crypt:{name:"Cripta del Ferro",floor:"#20252e",alt:"#242a33",wall:"#626875",accent:"#776541",enemySpeed:1},
- forest:{name:"Bosco Sepolto",floor:"#1c2b27",alt:"#20332e",wall:"#49645a",accent:"#617d52",enemySpeed:1.05},
- ruins:{name:"Rovine Dorate",floor:"#302a24",alt:"#373027",wall:"#786a57",accent:"#9a7844",enemySpeed:1.08},
- abyss:{name:"Abisso Violetto",floor:"#211c2e",alt:"#282136",wall:"#66557d",accent:"#8f6ec1",enemySpeed:1.13}
-};
-const CURSES=[
- {id:"glass",name:"Carne di Vetro",desc:"+35% danni inflitti e +25% danni subiti.",apply(){P.dmg*=1.35}},
- {id:"hunger",name:"Fame delle Anime",desc:"+40% Anime, ma le pozioni curano meno.",apply(){}},
- {id:"chains",name:"Catene del Vuoto",desc:"+25% monete, ma -12% velocità.",apply(){P.speed*=.88}}
-];
-function chooseBiome(){let order=["crypt","forest","ruins","abyss"];biome=order[Math.floor((room-1)/4)%order.length]}
-function discovered(){try{return JSON.parse(localStorage.getItem("eclipseCodex")||"[]")}catch{return[]}}
-function discover(id){let d=discovered();if(!d.includes(id)){d.push(id);localStorage.setItem("eclipseCodex",JSON.stringify(d))}}
-function openCodex(){let d=discovered();ui.codexGrid.innerHTML="";RELICS.forEach(r=>{let b=document.createElement("div"),ok=d.includes(r.id);b.className="reward-card "+(ok?"":"codex-locked");b.innerHTML=`<strong>${ok?r.name:"Reliquia sconosciuta"}</strong><span>${ok?r.desc:"Trovala durante una run per sbloccarla."}</span>`;ui.codexGrid.appendChild(b)});ui.menu.classList.remove("visible");ui.codex.classList.add("visible")}
-
-
-const STORY=[
- {title:"Prologo",text:"Il regno di Asterra era protetto da un unico giuramento: nessun sovrano avrebbe mai anteposto il proprio sangue al destino del popolo.\n\nTu eri il suo custode."},
- {title:"La Caduta",text:"Quando la persona che amavi fu condannata dall’Eclissi, spezzasti il patto. Apristi il Sigillo Nero e condannasti il regno che avevi promesso di proteggere."},
- {title:"Il Debito",text:"Ora Asterra è una terra frammentata. Le anime dei caduti vagano tra cripte, foreste e rovine.\n\nPer riscattarti dovrai raccogliere i frammenti del Giuramento e affrontare ciò che hai liberato."}
-];
-
-const QUESTS=[
- {id:"slayer",name:"Cacciatore degli Infranti",target:8,type:"kills",reward:"coins",amount:28},
- {id:"collector",name:"Anime Senza Pace",target:18,type:"souls",reward:"essence",amount:3},
- {id:"combo",name:"Danza della Lama",target:7,type:"combo",reward:"potion",amount:1},
- {id:"survivor",name:"Senza Ferite",target:2,type:"rooms",reward:"heal",amount:45}
-];
-
-const LEGACY=[
- {id:"vitality",name:"Sangue del Giurato",desc:"+8 vita massima iniziale per grado.",base:5,max:5},
- {id:"strength",name:"Ferro Antico",desc:"+2 danni iniziali per grado.",base:7,max:5},
- {id:"fortune",name:"Occhio del Mercante",desc:"+5 monete iniziali per grado.",base:8,max:4},
- {id:"memory",name:"Memoria delle Anime",desc:"+3% esperienza ottenuta per grado.",base:9,max:5}
-];
-
-const BOSS_NAMES={
- crypt:"Custode dell’Eclissi",
- forest:"Cervo del Sepolcro",
- ruins:"Re Senza Corona",
- abyss:"Araldo del Vuoto"
-};
-
-
-function accountMessage(text,type=""){
-  ui.accountMessage.textContent=text;
-  ui.accountMessage.className="account-message "+type;
-}
-function refreshAccountUI(user=window.EclipseCloud?.getUser?.()){
-  const logged=!!user;
-  ui.loggedOutArea.classList.toggle("hidden",logged);
-  ui.loggedInArea.classList.toggle("hidden",!logged);
-  ui.accountTitle.textContent=logged?"Account collegato":"Accedi";
-  ui.accountUserEmail.textContent=user?.email||"";
-  ui.accountIndicator.textContent=logged?(user.email.split("@")[0]||"Connesso"):"Ospite";
-  ui.cloudStatus.textContent=logged?"Pronto":"Non collegato";
-}
-function openAccount(){
-  ui.menu.classList.remove("visible");
-  ui.account.classList.add("visible");
-  refreshAccountUI();
-  if(!window.EclipseCloud?.configured){
-    accountMessage("Configura prima Supabase nel file cloud-config.js.","error");
-  }else accountMessage("");
-}
-async function accountAction(button,fn){
-  const old=button.textContent;
-  button.disabled=true;
-  button.textContent="ATTENDI...";
-  try{await fn()}catch(error){accountMessage(error.message||"Operazione non riuscita.","error")}
-  finally{button.disabled=false;button.textContent=old}
-}
-window.addEventListener("eclipse-cloud-ready",e=>refreshAccountUI(e.detail.user));
-window.addEventListener("eclipse-auth-change",e=>refreshAccountUI(e.detail.user));
-window.addEventListener("eclipse-cloud-error",e=>accountMessage(e.detail.message,"error"));
-
-function loadMeta(){try{return Object.assign({essence:0,legacy:{}},JSON.parse(localStorage.getItem("eclipseMeta")||"{}"))}catch{return{essence:0,legacy:{}}}}
-function saveMeta(meta){localStorage.setItem("eclipseMeta",JSON.stringify(meta))}
-function legacyRank(id){return loadMeta().legacy[id]||0}
-function applyLegacy(){
- const meta=loadMeta();
- P.maxHp+=legacyRank("vitality")*8; P.hp=P.maxHp;
- P.dmg+=legacyRank("strength")*2;
- coins+=legacyRank("fortune")*5;
- P.xpMult=1+legacyRank("memory")*.03;
-}
-function openLegacy(){
- const meta=loadMeta(); ui.legacyEssence.textContent=meta.essence; ui.legacyGrid.innerHTML="";
- LEGACY.forEach(l=>{
-   const rank=meta.legacy[l.id]||0, cost=l.base+rank*4, maxed=rank>=l.max;
-   const b=document.createElement("button");
-   b.className="reward-card legacy-card"+(maxed?" maxed":"");
-   b.innerHTML=`<span class="rank">Grado ${rank}/${l.max}</span><strong>${l.name}</strong><span>${l.desc}</span><em>${maxed?"Completato":cost+" Essenza"}</em>`;
-   b.onclick=()=>{const m=loadMeta(),r=m.legacy[l.id]||0,c=l.base+r*4;if(r>=l.max||m.essence<c)return;m.essence-=c;m.legacy[l.id]=r+1;saveMeta(m);openLegacy();record();beep(420,.1)};
-   ui.legacyGrid.appendChild(b);
- });
- ui.menu.classList.remove("visible");ui.legacy.classList.add("visible");
-}
-function startStory(fromMenu=true){storyIndex=0;showStoryPage();if(fromMenu)ui.menu.classList.remove("visible");ui.story.classList.add("visible")}
-function showStoryPage(){const page=STORY[storyIndex];ui.storyTitle.textContent=page.title;ui.storyText.textContent=page.text;$("storyNextButton").textContent=storyIndex===STORY.length-1?"INIZIA LA RUN":"CONTINUA"}
-function nextStory(){if(storyIndex<STORY.length-1){storyIndex++;showStoryPage()}else{localStorage.setItem("eclipseStorySeen","1");ui.story.classList.remove("visible");newRun(true)}}
-function createQuest(){
- const q=QUESTS[Math.floor(Math.random()*QUESTS.length)];
- quest={...q,startKills:kills,startSouls:souls,startRoom:room,progress:0,complete:false};
-}
-function questValue(){
- if(!quest)return 0;
- if(quest.type==="kills")return kills-quest.startKills;
- if(quest.type==="souls")return Math.floor(souls-quest.startSouls);
- if(quest.type==="combo")return combo;
- if(quest.type==="rooms")return room-quest.startRoom;
- return 0;
-}
-function updateQuest(){
- if(!quest||quest.complete)return;
- quest.progress=Math.max(0,questValue());
- if(quest.progress>=quest.target){
-   quest.complete=true;pendingMissionReward=quest;
-   ui.questTracker.classList.add("complete");
-   setTimeout(()=>{if(state==="play"||state==="transition"){state="mission";ui.missionCompleteTitle.textContent=quest.name;ui.missionCompleteText.textContent=missionRewardText(quest);ui.missionComplete.classList.add("visible")}},250);
- }
-}
-function missionRewardText(q){
- if(q.reward==="coins")return `Ricompensa: ${q.amount} monete`;
- if(q.reward==="essence")return `Ricompensa permanente: ${q.amount} Essenza`;
- if(q.reward==="potion")return `Ricompensa: ${q.amount} pozione`;
- return `Ricompensa: recuperi ${q.amount} vita`;
-}
-function claimMission(){
- const q=pendingMissionReward;if(!q)return;
- if(q.reward==="coins")coins+=q.amount;
- if(q.reward==="essence"){const m=loadMeta();m.essence+=q.amount;saveMeta(m)}
- if(q.reward==="potion")potions+=q.amount;
- if(q.reward==="heal")P.hp=Math.min(P.maxHp,P.hp+q.amount);
- missionsDone++;pendingMissionReward=null;ui.missionComplete.classList.remove("visible");ui.questTracker.classList.remove("complete");createQuest();state="play";hud();saveRun();beep(510,.12)
-}
-function showBossBanner(){
- ui.bossName.textContent=BOSS_NAMES[biome]||"Custode dell’Eclissi";
- ui.bossBanner.classList.add("show");
- setTimeout(()=>ui.bossBanner.classList.remove("show"),2200);
-}
-
-const SHOP=[
-{id:"potion",name:"Pozione Cremisi",desc:"Ottieni una pozione.",cost:18,buy(){potions++}},
-{id:"heal",name:"Riposo del Giurato",desc:"Recupera 55 vita.",cost:14,buy(){P.hp=Math.min(P.maxHp,P.hp+55)}},
-{id:"forge",name:"Affilatura",desc:"+4 danni per questa run.",cost:30,buy(){P.dmg+=4}},
-{id:"armor",name:"Rinforzo",desc:"+1 armatura per questa run.",cost:34,buy(){P.armor++}}
-];
-function loadSettings(){try{return Object.assign({volume:35,effects:true,difficulty:"normal"},JSON.parse(localStorage.getItem("eclipseSettings")||"{}"))}catch{return{volume:35,effects:true,difficulty:"normal"}}}
-function saveSettings(){settings={volume:+ui.volume.value,effects:ui.effects.checked,difficulty:ui.difficulty.value};localStorage.setItem("eclipseSettings",JSON.stringify(settings))}
-function applySettings(){ui.volume.value=settings.volume;ui.effects.checked=settings.effects;ui.difficulty.value=settings.difficulty}
-function record(){let r=JSON.parse(localStorage.getItem("eclipseRecord")||'{"room":0,"score":0}');ui.bestRoom.textContent=r.room;ui.bestScore.textContent=r.score;ui.continueButton.disabled=!localStorage.getItem("eclipseSave");ui.continueButton.style.opacity=ui.continueButton.disabled?".45":"1"}
-function score(){return room*100+kills*15+souls*4+relics.length*75}
-function saveRun(){localStorage.setItem("eclipseSave",JSON.stringify({room,coins,souls,kills,potions,relics,player:P,settings,curse,biome,combo,quest,missionsDone}))}
-function loadRun(){let s;try{s=JSON.parse(localStorage.getItem("eclipseSave"))}catch{}if(!s)return;room=s.room;coins=s.coins;souls=s.souls;kills=s.kills;potions=s.potions;relics=s.relics||[];curse=s.curse||null;biome=s.biome||"crypt";combo=s.combo||0;quest=s.quest||null;missionsDone=s.missionsDone||0;Object.assign(P,s.player);if(!quest)createQuest();hide();spawn();state="play";hud();note("Run caricata")}
-function clearSave(){localStorage.removeItem("eclipseSave")}
-function reset(){room=1;coins=0;souls=0;kills=0;potions=1;relics=[];combo=0;comboTimer=0;curse=null;biome="crypt";quest=null;missionsDone=0;Object.assign(P,{x:480,y:270,speed:205,maxHp:120,hp:120,maxSt:100,st:100,dmg:22,atkCd:0,dodgeCd:0,inv:0,dodge:0,fx:1,fy:0,crit:.08,lifeSteal:0,armor:0,level:1,xp:0,nextXp:35,skillCd:0,skillRate:1,comboBonus:0,xpMult:1});applyLegacy();createQuest();spawn();hud()}
-function newRun(skipStory=false){if(!skipStory&&!localStorage.getItem("eclipseStorySeen")){startStory(false);return}clearSave();reset();hide();state="play";beep(220,.08)}
-function hide(){[ui.menu,ui.settings,ui.account,ui.story,ui.legacy,ui.missionComplete,ui.codex,ui.reward,ui.shop,ui.level,ui.pause,ui.over].forEach(e=>e.classList.remove("visible"))}
-function spawn(){enemies=[];shots=[];drops=[];shopBought.clear();chooseBiome();generateRoom();P.x=480;P.y=270;let boss=room%5===0;if(boss){enemies.push(makeEnemy("boss",480,145));showBossBanner();note((BOSS_NAMES[biome]||"Il Custode")+" è apparso");return}let n=Math.min(2+Math.floor(room*.72),9);for(let i=0;i<n;i++){let p=randomFree(170),roll=Math.random(),t=roll<.18?"mage":roll<.48?"archer":"knight";enemies.push(makeEnemy(t,p.x,p.y))}}
-function generateRoom(){obstacles=[];let count=2+Math.floor(Math.random()*4);for(let i=0;i<count;i++){for(let tries=0;tries<30;tries++){let w=45+Math.floor(Math.random()*70),h=35+Math.floor(Math.random()*65),x=A.x+70+Math.random()*(A.w-w-140),y=A.y+70+Math.random()*(A.h-h-140),o={x,y,w,h};if(Math.hypot(x+w/2-480,y+h/2-270)>130&&!obstacles.some(q=>rectHit(o,q,25))){obstacles.push(o);break}}}}
-function rectHit(a,b,p=0){return a.x-p<b.x+b.w&&a.x+a.w+p>b.x&&a.y-p<b.y+b.h&&a.y+a.h+p>b.y}
-function randomFree(minPlayer=0){for(let i=0;i<100;i++){let x=A.x+35+Math.random()*(A.w-70),y=A.y+35+Math.random()*(A.h-70);if(Math.hypot(x-480,y-270)>=minPlayer&&!obstacles.some(o=>circleRect(x,y,25,o)))return{x,y}}return{x:120,y:120}}
-function circleRect(x,y,r,o){let nx=Math.max(o.x,Math.min(x,o.x+o.w)),ny=Math.max(o.y,Math.min(y,o.y+o.h));return Math.hypot(x-nx,y-ny)<r}
-function makeEnemy(type,x,y){let mult=settings.difficulty==="hard"?1.22:1,s={type,x,y,flash:0,hitCd:0,shotCd:.7+Math.random(),phase:0};if(type==="knight")Object.assign(s,{r:15,speed:64+room*2,hp:(34+room*7)*mult,maxHp:(34+room*7)*mult,dmg:(10+room)*mult});if(type==="archer")Object.assign(s,{r:14,speed:48+room,hp:(26+room*5)*mult,maxHp:(26+room*5)*mult,dmg:(8+room)*mult,ideal:225});if(type==="mage")Object.assign(s,{r:15,speed:40+room,hp:(30+room*6)*mult,maxHp:(30+room*6)*mult,dmg:(9+room)*mult,ideal:260});if(type==="boss")Object.assign(s,{r:31,speed:55+room,hp:(350+room*26)*mult,maxHp:(350+room*26)*mult,dmg:(18+room*2)*mult,shotCd:.7});if(type!=="boss"&&room>=4&&Math.random()<Math.min(.08+room*.012,.28)){s.elite=true;s.hp*=1.8;s.maxHp*=1.8;s.dmg*=1.35;s.speed*=1.12}s.speed*=BIOMES[biome].enemySpeed;return s}
-function moveEntity(e,dx,dy){let ox=e.x,oy=e.y;e.x+=dx;e.y+=dy;e.x=Math.max(A.x+e.r,Math.min(A.x+A.w-e.r,e.x));e.y=Math.max(A.y+e.r,Math.min(A.y+A.h-e.r,e.y));if(obstacles.some(o=>circleRect(e.x,e.y,e.r,o))){e.x=ox;e.y=oy}}
-function update(dt){if(state!=="play")return;P.atkCd=Math.max(0,P.atkCd-dt);P.dodgeCd=Math.max(0,P.dodgeCd-dt);P.inv=Math.max(0,P.inv-dt);P.dodge=Math.max(0,P.dodge-dt);P.skillCd=Math.max(0,P.skillCd-dt*(P.skillRate||1));comboTimer=Math.max(0,comboTimer-dt);if(comboTimer<=0)combo=0;shake=Math.max(0,shake-dt*20);let dx=0,dy=0;if(keys.has("KeyW")||keys.has("ArrowUp"))dy--;if(keys.has("KeyS")||keys.has("ArrowDown"))dy++;if(keys.has("KeyA")||keys.has("ArrowLeft"))dx--;if(keys.has("KeyD")||keys.has("ArrowRight"))dx++;let l=Math.hypot(dx,dy);if(l){dx/=l;dy/=l;P.fx=dx;P.fy=dy;let sp=P.speed*(P.dodge>0?2.65:1);moveEntity(P,dx*sp*dt,dy*sp*dt)}if(P.dodge<=0)P.st=Math.min(P.maxSt,P.st+30*dt);
-for(const e of enemies){e.hitCd=Math.max(0,e.hitCd-dt);e.flash=Math.max(0,e.flash-dt);e.shotCd-=dt;let vx=P.x-e.x,vy=P.y-e.y,d=Math.hypot(vx,vy)||1;
-if(e.type==="archer"||e.type==="mage"){let ideal=e.ideal,dir=d>ideal?1:d<150?-1:0;moveEntity(e,vx/d*e.speed*dir*dt,vy/d*e.speed*dir*dt);if(e.shotCd<=0){if(e.type==="mage"){for(let a=-.22;a<=.22;a+=.22){let ca=Math.cos(a),sa=Math.sin(a),nx=vx/d*ca-vy/d*sa,ny=vx/d*sa+vy/d*ca;projectile(e.x,e.y,nx,ny,e.dmg,"enemy","#9a72d1")}e.shotCd=2.0}else{projectile(e.x,e.y,vx/d,vy/d,e.dmg,"enemy","#b98655");e.shotCd=1.45}}}
-else{let mult=e.type==="boss"&&e.hp<e.maxHp*.5?1.38:1;moveEntity(e,vx/d*e.speed*mult*dt,vy/d*e.speed*mult*dt);if(e.type==="boss"&&e.shotCd<=0){for(let i=0;i<10;i++){let a=i*Math.PI/5+e.phase;projectile(e.x,e.y,Math.cos(a),Math.sin(a),e.dmg*.62,"enemy","#986fc5")}e.phase+=.28;e.shotCd=e.hp<e.maxHp*.5?.72:1.15}}
-if(d<P.r+e.r+3&&e.hitCd<=0&&P.inv<=0){hurt(Math.max(1,e.dmg-P.armor));e.hitCd=.85}}
-enemies=enemies.filter(e=>e.hp>0);
-for(const s of shots){s.x+=s.vx*s.speed*dt;s.y+=s.vy*s.speed*dt;s.life-=dt;if(obstacles.some(o=>circleRect(s.x,s.y,s.r,o)))s.life=0;if(s.owner==="enemy"&&s.life>0&&Math.hypot(s.x-P.x,s.y-P.y)<P.r+s.r&&P.inv<=0){hurt(Math.max(1,s.dmg-P.armor));s.life=0}}shots=shots.filter(s=>s.life>0&&s.x>A.x&&s.x<A.x+A.w&&s.y>A.y&&s.y<A.y+A.h);
-for(const d of drops){d.life-=dt;if(Math.hypot(d.x-P.x,d.y-P.y)<24){d.type==="coin"?coins+=d.value:souls+=d.value;d.life=0}}drops=drops.filter(d=>d.life>0);
-particles.forEach(p=>{p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt});particles=particles.filter(p=>p.life>0);
-updateQuest();if(enemies.length===0){state="transition";saveRun();setTimeout(afterRoom,320)}hud()}
-function attack(){if(state!=="play"||P.atkCd>0||P.st<15)return;P.atkCd=.31;P.st-=15;let ax=P.x+P.fx*42,ay=P.y+P.fy*42;burst(ax,ay,"#e3c47b",8);beep(155,.035);let hit=false;for(const e of enemies){if(Math.hypot(e.x-ax,e.y-ay)<61+e.r){let crit=Math.random()<P.crit,damage=P.dmg*(1+Math.min(combo,12)*.035)*(crit?2:1);e.hp-=damage;e.flash=.12;P.hp=Math.min(P.maxHp,P.hp+damage*P.lifeSteal);burst(e.x,e.y,crit?"#fff0a8":"#c44553",crit?14:8);hit=true;combo++;comboTimer=2.2;if(e.hp<=0)killEnemy(e)}}if(hit&&settings.effects)shake=5}
-function skill(){if(state!=="play"||P.skillCd>0)return;P.skillCd=8;P.inv=.55;beep(90,.15);burst(P.x,P.y,"#7ab9e2",28);for(const e of enemies){let d=Math.hypot(e.x-P.x,e.y-P.y);if(d<155){e.hp-=P.dmg*1.35;e.flash=.18;e.x+=(e.x-P.x)*.16;e.y+=(e.y-P.y)*.16;if(e.hp<=0)killEnemy(e)}}if(settings.effects)shake=11}
-function killEnemy(e){kills++;let gain=e.type==="boss"?28:8;P.xp+=gain*(P.xpMult||1);coins+=(e.type==="boss"?40:4+Math.floor(Math.random()*5))*(curse==="chains"?1.25:1);souls+=(e.type==="boss"?24:3)*(curse==="hunger"?1.4:1);for(let i=0;i<(e.type==="boss"?10:2);i++)drops.push({x:e.x+(Math.random()-.5)*25,y:e.y+(Math.random()-.5)*25,type:i%2?"coin":"soul",value:1,life:6});checkLevel()}
-function checkLevel(){if(P.xp>=P.nextXp){P.xp-=P.nextXp;P.level++;P.nextXp=Math.floor(P.nextXp*1.38);state="level";openLevel()}}
-function openLevel(){ui.levelGrid.innerHTML="";let opts=[["Vigore","+20 vita massima",()=>{P.maxHp+=20;P.hp+=20}],["Forza","+5 danni",()=>P.dmg+=5],["Agilità","+8% velocità",()=>P.speed*=1.08]];opts.forEach(([n,d,f])=>{let b=document.createElement("button");b.className="reward-card";b.innerHTML=`<strong>${n}</strong><span>${d}</span>`;b.onclick=()=>{f();ui.level.classList.remove("visible");state="play";hud()};ui.levelGrid.appendChild(b)});ui.level.classList.add("visible");note(`Livello ${P.level}`)}
-function dodge(){if(state!=="play"||P.dodgeCd>0||P.st<24)return;P.dodgeCd=.72;P.dodge=.22;P.inv=.34;P.st-=24;burst(P.x,P.y,"#8db9d8",10)}
-function drink(){if(state!=="play"||potions<=0||P.hp>=P.maxHp)return;potions--;P.hp=Math.min(P.maxHp,P.hp+(curse==="hunger"?35:55));burst(P.x,P.y,"#df5263",18);beep(360,.08);hud()}
-function hurt(n){P.hp-=n*(curse==="glass"?1.25:1);P.inv=.48;if(settings.effects)shake=9;burst(P.x,P.y,"#bd3747",14);beep(75,.07);if(P.hp<=0){P.hp=0;gameOver()}}
-function projectile(x,y,vx,vy,dmg,owner,color){shots.push({x,y,vx,vy,dmg,owner,color,speed:190,r:5,life:4})}
-function afterRoom(){if(state!=="transition")return;if(room%5===0&&room>=5&&!curse)openCurse();else if(room%3===0&&room%5!==0)openShop();else openRewards()}
-
-function openCurse(){state="reward";ui.rewardGrid.innerHTML="";CURSES.forEach(c=>{let b=document.createElement("button");b.className="reward-card curse-card";b.innerHTML=`<strong>${c.name}</strong><span>${c.desc}</span><em>Potere con un prezzo</em>`;b.onclick=()=>{curse=c.id;c.apply();ui.reward.classList.remove("visible");nextRoom()};ui.rewardGrid.appendChild(b)});ui.reward.classList.add("visible");note("Scegli una maledizione")}
-
-function openRewards(){state="reward";ui.rewardGrid.innerHTML="";[...RELICS].sort(()=>Math.random()-.5).slice(0,3).forEach(r=>{let b=document.createElement("button");b.className="reward-card";b.innerHTML=`<strong>${r.name}</strong><span>${r.desc}</span><em>Reliquia permanente nella run</em>`;b.onclick=()=>{r.apply();relics.push(r.id);discover(r.id);ui.reward.classList.remove("visible");nextRoom()};ui.rewardGrid.appendChild(b)});ui.reward.classList.add("visible")}
-function openShop(){state="shop";ui.shopCoins.textContent=coins;renderShop();ui.shop.classList.add("visible")}
-function renderShop(){ui.shopGrid.innerHTML="";SHOP.forEach(i=>{let disabled=coins<i.cost||shopBought.has(i.id),b=document.createElement("button");b.className="reward-card"+(disabled?" disabled":"");b.innerHTML=`<strong>${i.name}</strong><span>${i.desc}</span><em>${shopBought.has(i.id)?"Acquistato":i.cost+" monete"}</em>`;b.onclick=()=>{if(disabled)return;coins-=i.cost;i.buy();shopBought.add(i.id);ui.shopCoins.textContent=coins;renderShop();hud()};ui.shopGrid.appendChild(b)})}
-function nextRoom(){room++;spawn();state="play";hud();saveRun()}
-function leaveShop(){ui.shop.classList.remove("visible");nextRoom()}
-function gameOver(){state="over";clearSave();let gainedEssence=Math.max(1,Math.floor(room/3)+Math.floor(missionsDone/2));let meta=loadMeta();meta.essence+=gainedEssence;saveMeta(meta);let sc=score(),r=JSON.parse(localStorage.getItem("eclipseRecord")||'{"room":0,"score":0}');r.room=Math.max(r.room,room);r.score=Math.max(r.score,sc);localStorage.setItem("eclipseRecord",JSON.stringify(r));ui.summary.innerHTML=`<div><span>Stanza raggiunta</span><b>${room}</b></div><div><span>Livello</span><b>${P.level}</b></div><div><span>Uccisioni</span><b>${kills}</b></div><div><span>Anime</span><b>${souls}</b></div><div><span>Punteggio</span><b>${sc}</b></div><div><span>Essenza ottenuta</span><b>${gainedEssence}</b></div>`;ui.over.classList.add("visible");record()}
-function togglePause(){if(state==="play"){state="pause";ui.pause.classList.add("visible")}else if(state==="pause"){state="play";ui.pause.classList.remove("visible")}}
-function backMenu(){hide();state="menu";ui.menu.classList.add("visible");record()}
-function saveQuit(){saveRun();backMenu();note("Run salvata")}
-function note(t){ui.toast.textContent=t;ui.toast.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>ui.toast.classList.remove("show"),1700)}
-function hud(){ui.healthBar.style.width=`${Math.max(0,P.hp/P.maxHp*100)}%`;ui.staminaBar.style.width=`${P.st/P.maxSt*100}%`;ui.xpBar.style.width=`${P.xp/P.nextXp*100}%`;ui.healthText.textContent=`${Math.ceil(P.hp)}/${Math.ceil(P.maxHp)}`;ui.staminaText.textContent=`${Math.ceil(P.st)}/${Math.ceil(P.maxSt)}`;ui.levelText.textContent=`Lv. ${P.level}`;ui.roomNumber.textContent=room;ui.coins.textContent=coins;ui.souls.textContent=souls;ui.kills.textContent=kills;ui.relicCount.textContent=relics.length;ui.potionCount.textContent=potions;ui.skillStatus.textContent=P.skillCd<=0?"Pronta":Math.ceil(P.skillCd)+"s";ui.curseStatus.textContent=curse?CURSES.find(c=>c.id===curse).name:"Nessuna";ui.biomeName.textContent=BIOMES[biome].name;ui.comboValue.textContent=combo;ui.comboDisplay.classList.toggle("show",combo>1);const meta=loadMeta();ui.essence.textContent=meta.essence;ui.missionsDone.textContent=missionsDone;if(quest){ui.questName.textContent=quest.name;ui.questProgress.textContent=`${Math.min(quest.progress||0,quest.target)}/${quest.target}`;}else{ui.questName.textContent="Nessuna";ui.questProgress.textContent="0/0"}drawMap()}
-function drawMap(){ui.minimap.innerHTML="";for(let i=1;i<=15;i++){let q=document.createElement("i");if(i<room)q.className="done";if(i===room)q.className="current";ui.minimap.appendChild(q)}}
-function burst(x,y,color,n){for(let i=0;i<n;i++){let a=Math.random()*Math.PI*2,s=25+Math.random()*120;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.25+Math.random()*.45,color,size:2+Math.random()*4})}}
-function beep(freq,dur){if(settings.volume<=0)return;try{let ac=beep.ac||(beep.ac=new(window.AudioContext||window.webkitAudioContext)()),o=ac.createOscillator(),g=ac.createGain();o.frequency.value=freq;o.type="triangle";g.gain.value=settings.volume/100*.08;o.connect(g);g.connect(ac.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+dur);o.stop(ac.currentTime+dur)}catch{}}
-function draw(){let sx=settings.effects&&shake?(Math.random()-.5)*shake:0,sy=settings.effects&&shake?(Math.random()-.5)*shake:0;X.save();X.translate(sx,sy);let g=X.createLinearGradient(0,0,0,C.height);g.addColorStop(0,"#171c24");g.addColorStop(1,"#07090c");X.fillStyle=g;X.fillRect(-12,-12,C.width+24,C.height+24);arena();drops.forEach(drawDrop);shots.forEach(drawShot);enemies.forEach(drawEnemy);drawPlayer();particles.forEach(p=>{X.globalAlpha=Math.max(0,p.life*2);X.fillStyle=p.color;X.fillRect(p.x,p.y,p.size,p.size)});X.globalAlpha=1;X.restore();requestAnimationFrame(loop)}
-function arena(){let b=BIOMES[biome];X.fillStyle=b.floor;X.fillRect(A.x,A.y,A.w,A.h);for(let y=A.y;y<A.y+A.h;y+=32)for(let x=A.x;x<A.x+A.w;x+=32){X.fillStyle=((x+y)/32)%2?b.floor:b.alt;X.fillRect(x,y,32,32);X.strokeStyle="rgba(255,255,255,.025)";X.strokeRect(x,y,32,32)}X.strokeStyle=b.wall;X.lineWidth=4;X.strokeRect(A.x,A.y,A.w,A.h);for(const o of obstacles){X.fillStyle="#343a45";X.fillRect(o.x,o.y,o.w,o.h);X.fillStyle="#272c34";X.fillRect(o.x+5,o.y+5,o.w-10,o.h-10);X.strokeStyle=b.accent;X.strokeRect(o.x,o.y,o.w,o.h)}}
-function drawPlayer(){X.save();X.translate(P.x,P.y);if(P.inv>0)X.globalAlpha=.55+.25*Math.sin(performance.now()*.04);X.fillStyle="#13171d";X.fillRect(-12,-16,24,27);X.fillStyle="#4c5969";X.fillRect(-10,-13,20,18);X.fillStyle="#d7b56d";X.fillRect(-8,-11,16,4);X.fillStyle="#3fd18a";X.fillRect(-6,-6,4,3);X.fillRect(2,-6,4,3);X.fillStyle="#6c2731";X.fillRect(-11,8,22,9);X.strokeStyle="#e3c47b";X.lineWidth=5;X.beginPath();X.moveTo(P.fx*12,P.fy*12);X.lineTo(P.fx*34,P.fy*34);X.stroke();if(P.skillCd<=0){X.strokeStyle="rgba(90,168,215,.45)";X.beginPath();X.arc(0,0,23,0,Math.PI*2);X.stroke()}X.restore()}
-function drawEnemy(e){X.save();X.translate(e.x,e.y);if(e.elite){X.strokeStyle="#e2a94c";X.lineWidth=3;X.beginPath();X.arc(0,0,e.r+8,0,Math.PI*2);X.stroke()}if(e.type==="knight"){X.fillStyle=e.flash?"#eee0cd":"#5c2c35";X.fillRect(-13,-15,26,27);X.fillStyle="#242830";X.fillRect(-10,-12,20,8)}else if(e.type==="archer"){X.fillStyle=e.flash?"#eee0cd":"#37434d";X.fillRect(-11,-14,22,25);X.strokeStyle="#c7a664";X.beginPath();X.arc(13,0,10,-1.2,1.2);X.stroke()}else if(e.type==="mage"){X.fillStyle=e.flash?"#f0e0ff":"#493b5d";X.fillRect(-12,-15,24,27);X.fillStyle="#9b75ca";X.fillRect(-7,-9,14,6)}else{X.fillStyle=e.flash?"#fff1d8":"#211b27";X.fillRect(-28,-31,56,56);X.fillStyle="#7b2f43";X.fillRect(-22,-25,44,25);X.strokeStyle="#8f6ec1";X.lineWidth=4;X.strokeRect(-30,-33,60,60)}let w=e.type==="boss"?90:34;X.fillStyle="#0a0b0e";X.fillRect(-w/2,-e.r-16,w,5);X.fillStyle=e.type==="boss"?"#8f63b5":"#bd3d4d";X.fillRect(-w/2,-e.r-16,w*e.hp/e.maxHp,5);X.restore()}
-function drawShot(s){X.fillStyle=s.color||"#a47cd1";X.beginPath();X.arc(s.x,s.y,s.r,0,Math.PI*2);X.fill()}
-function drawDrop(d){X.fillStyle=d.type==="coin"?"#e0b84d":"#46d49a";X.fillRect(d.x-4,d.y-4,8,8)}
-function loop(t){let dt=Math.min((t-last)/1000||0,.033);last=t;update(dt);draw()}
-document.addEventListener("keydown",e=>{keys.add(e.code);if(e.code==="Space"){e.preventDefault();attack()}if(e.code.startsWith("Shift"))dodge();if(e.code==="KeyE")drink();if(e.code==="KeyQ")skill();if(e.code==="KeyP")togglePause()});document.addEventListener("keyup",e=>keys.delete(e.code));
-$("newRunButton").onclick=newRun;ui.continueButton.onclick=loadRun;$("settingsButton").onclick=()=>{ui.menu.classList.remove("visible");ui.settings.classList.add("visible")};$("accountButton").onclick=openAccount;
-$("closeAccount").onclick=()=>{ui.account.classList.remove("visible");ui.menu.classList.add("visible");record()};
-$("loginButton").onclick=()=>accountAction($("loginButton"),async()=>{
- const email=ui.accountEmail.value.trim(),password=ui.accountPassword.value;
- if(!email||!password)throw new Error("Inserisci email e password.");
- await window.EclipseCloud.login(email,password);
- refreshAccountUI();
- accountMessage("Accesso effettuato.","success");
-});
-$("registerButton").onclick=()=>accountAction($("registerButton"),async()=>{
- const email=ui.accountEmail.value.trim(),password=ui.accountPassword.value;
- if(!email||password.length<6)throw new Error("Inserisci un’email valida e una password di almeno 6 caratteri.");
- await window.EclipseCloud.register(email,password);
- accountMessage("Registrazione completata. Controlla la tua email per confermare l’account.","success");
-});
-$("resetPasswordButton").onclick=()=>accountAction($("resetPasswordButton"),async()=>{
- const email=ui.accountEmail.value.trim();
- if(!email)throw new Error("Inserisci prima la tua email.");
- await window.EclipseCloud.resetPassword(email);
- accountMessage("Email per reimpostare la password inviata.","success");
-});
-$("logoutButton").onclick=()=>accountAction($("logoutButton"),async()=>{
- await window.EclipseCloud.logout();
- refreshAccountUI(null);
- accountMessage("Disconnessione completata.","success");
-});
-$("uploadSaveButton").onclick=()=>accountAction($("uploadSaveButton"),async()=>{
- ui.cloudStatus.textContent="Sincronizzazione...";
- const when=await window.EclipseCloud.upload();
- ui.cloudStatus.textContent="Salvato";
- accountMessage("Progressi caricati nel cloud.","success");
-});
-$("downloadSaveButton").onclick=()=>accountAction($("downloadSaveButton"),async()=>{
- if(!confirm("Sostituire i progressi presenti su questo dispositivo con quelli cloud?"))return;
- ui.cloudStatus.textContent="Download...";
- await window.EclipseCloud.download();
- ui.cloudStatus.textContent="Scaricato";
- accountMessage("Progressi cloud scaricati. Ricarico il gioco...","success");
- setTimeout(()=>location.reload(),700);
-});
-$("codexButton").onclick=openCodex;$("closeCodex").onclick=()=>{ui.codex.classList.remove("visible");ui.menu.classList.add("visible")};$("legacyButton").onclick=openLegacy;$("closeLegacy").onclick=()=>{ui.legacy.classList.remove("visible");ui.menu.classList.add("visible")};$("storyButton").onclick=()=>startStory(true);$("storyNextButton").onclick=nextStory;$("closeStoryButton").onclick=()=>{ui.story.classList.remove("visible");ui.menu.classList.add("visible")};$("claimMissionButton").onclick=claimMission;$("closeSettings").onclick=()=>{saveSettings();ui.settings.classList.remove("visible");ui.menu.classList.add("visible")};$("fullscreenButton").onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();$("resumeButton").onclick=togglePause;$("saveQuitButton").onclick=saveQuit;$("restartButton").onclick=newRun;$("menuButton").onclick=backMenu;$("leaveShop").onclick=leaveShop;
-[ui.volume,ui.effects,ui.difficulty].forEach(e=>e.addEventListener("change",saveSettings));
-document.querySelectorAll("[data-key]").forEach(b=>{let code=b.dataset.key,down=e=>{e.preventDefault();keys.add(code);if(code==="Space")attack();if(code==="ShiftLeft")dodge();if(code==="KeyE")drink();if(code==="KeyQ")skill()},up=e=>{e.preventDefault();keys.delete(code)};b.addEventListener("pointerdown",down);["pointerup","pointercancel","pointerleave"].forEach(n=>b.addEventListener(n,up))});
-applySettings();record();hud();requestAnimationFrame(loop);
+(() => {
+const cv=document.getElementById("game"),c=cv.getContext("2d"),$=id=>document.getElementById(id);
+c.imageSmoothingEnabled=false;
+const ui={menu:$("menu"),pause:$("pause"),difficulty:$("difficulty"),hpBar:$("hpBar"),hpText:$("hpText"),stBar:$("stBar"),stText:$("stText"),bossBar:$("bossBar"),bossPhase:$("bossPhase"),souls:$("souls"),deaths:$("deaths"),notice:$("notice"),cont:$("continue")};
+const keys=new Set(), W=7600, ground=455;
+let state="menu",difficulty="normal",last=0,cam=0,souls=0,deaths=0,checkpoint=0,noticeTimer,bossActive=false,victory=false;
+const cps=[120,2050,4300,6250];
+const P={x:120,y:393,w:34,h:62,vx:0,vy:0,speed:275,jump:650,gravity:1800,onGround:false,baseHp:120,maxHp:120,hp:120,maxSt:100,st:100,facing:1,attack:0,attackCd:0,dodge:0,dodgeCd:0,inv:0,coyote:0,jumpBuf:0};
+const platforms=[
+[0,455,980,100],[1060,455,640,100],[1780,455,850,100],[2700,455,520,100],[3310,455,1080,100],[4470,455,700,100],[5270,455,800,100],[6170,455,1430,100],
+[500,355,240,28],[1180,330,210,28],[1450,270,170,28],[2200,345,250,28],[2900,330,190,28],[3500,350,250,28],[3900,285,220,28],[4700,330,250,28],[5500,335,260,28]
+].map(a=>({x:a[0],y:a[1],w:a[2],h:a[3]}));
+const enemies=[],particles=[];
+const overlap=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+function enemy(x,type="soldier"){let boss=type==="boss",hp=boss?(difficulty==="fractured"?900:650):70;return{type,x,y:ground-(boss?120:54),w:boss?90:34,h:boss?120:54,vx:0,vy:0,maxHp:hp,hp,damage:boss?18:12,dir:-1,phase:1,attackCd:0,hurt:0,dead:false,onGround:false}}
+function resetEnemies(){enemies.length=0;[720,1320,2320,3010,3700,4850,5650].forEach(x=>enemies.push(enemy(x)));enemies.push(enemy(7000,"boss"))}
+function fragment(){let loss=difficulty==="fractured"?Math.min(.7,deaths*.05):0;P.maxHp=Math.max(36,Math.round(P.baseHp*(1-loss)));P.hp=P.maxHp}
+function save(){localStorage.setItem("eclipseV2",JSON.stringify({difficulty,souls,deaths,checkpoint}));ui.cont.disabled=false}
+function load(){try{let s=JSON.parse(localStorage.getItem("eclipseV2")||"null");if(!s)return false;difficulty=s.difficulty||"normal";souls=s.souls||0;deaths=s.deaths||0;checkpoint=s.checkpoint||0;ui.difficulty.value=difficulty;return true}catch{return false}}
+function note(t){ui.notice.textContent=t;ui.notice.classList.add("on");clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>ui.notice.classList.remove("on"),1800)}
+function start(cont=false){if(cont){if(!load())return}else{difficulty=ui.difficulty.value;souls=0;deaths=0;checkpoint=0}victory=false;bossActive=false;fragment();Object.assign(P,{x:cps[checkpoint],y:393,vx:0,vy:0,st:100,inv:0});resetEnemies();state="play";ui.menu.classList.remove("show");note(difficulty==="fractured"?"MODALITÀ FRAMMENTATA":"IL BOSCO SEPOLTO");save()}
+function die(){if(state!=="play")return;deaths++;fragment();state="dead";note(difficulty==="fractured"?"FRAMMENTAZIONE: VITA MASSIMA -5%":"KAEL È CADUTO");setTimeout(()=>{Object.assign(P,{x:cps[checkpoint],y:393,vx:0,vy:0,hp:P.maxHp,st:100,inv:1.5});resetEnemies();bossActive=false;state="play";save()},700)}
+function burst(x,y,col,n=8){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*260,vy:(Math.random()-.7)*240,life:.4+Math.random()*.25,col})}
+function collision(b,dt){b.onGround=false;b.x+=b.vx*dt;for(const p of platforms)if(overlap(b,p)){if(b.vx>0)b.x=p.x-b.w;else if(b.vx<0)b.x=p.x+p.w;b.vx=0}b.y+=b.vy*dt;for(const p of platforms)if(overlap(b,p)){if(b.vy>0){b.y=p.y-b.h;b.vy=0;b.onGround=true}else if(b.vy<0){b.y=p.y+p.h;b.vy=0}}}
+function damage(n,x){if(P.inv>0||state!=="play")return;P.hp-=n;P.inv=.75;P.vx=(P.x<x?-1:1)*330;P.vy=-250;burst(P.x+17,P.y+20,"#bd3149",12);if(P.hp<=0)die()}
+function attack(){if(P.attackCd>0||state!=="play")return;P.attack=.22;P.attackCd=.36;let h={x:P.facing>0?P.x+P.w:P.x-56,y:P.y+8,w:56,h:46};enemies.forEach(e=>{if(!e.dead&&overlap(h,e)){e.hp-=e.type==="boss"?24:34;e.hurt=.14;e.vx=P.facing*180;burst(e.x+e.w/2,e.y+e.h/2,"#70b5ff");if(e.hp<=0){e.dead=true;souls+=e.type==="boss"?100:7;if(e.type==="boss"){victory=true;state="victory";note("IL CUSTODE È CADUTO");save()}}}})}
+function dodge(){if(P.dodgeCd>0||P.st<25||state!=="play")return;P.dodge=.24;P.dodgeCd=.7;P.inv=.34;P.st-=25;P.vx=P.facing*620}
+function updatePlayer(dt){let l=keys.has("ArrowLeft")||keys.has("KeyA"),r=keys.has("ArrowRight")||keys.has("KeyD"),m=(r?1:0)-(l?1:0);if(m)P.facing=m;if(P.dodge<=0)P.vx+=(m*P.speed-P.vx)*Math.min(1,dt*12);P.vy+=P.gravity*dt;P.coyote=P.onGround?.1:Math.max(0,P.coyote-dt);P.jumpBuf=Math.max(0,P.jumpBuf-dt);if(P.jumpBuf>0&&P.coyote>0){P.vy=-P.jump;P.coyote=0;P.jumpBuf=0}collision(P,dt);if(P.y>620)die();P.attack=Math.max(0,P.attack-dt);P.attackCd=Math.max(0,P.attackCd-dt);P.dodge=Math.max(0,P.dodge-dt);P.dodgeCd=Math.max(0,P.dodgeCd-dt);P.inv=Math.max(0,P.inv-dt);P.st=Math.min(P.maxSt,P.st+28*dt);cps.forEach((x,i)=>{if(i>checkpoint&&Math.abs(P.x-x)<70){checkpoint=i;note("CHECKPOINT "+(i+1));save()}});cam+=((P.x-cv.width*.38)-cam)*Math.min(1,dt*5);cam=Math.max(0,Math.min(W-cv.width,cam))}
+function updateEnemies(dt){enemies.forEach(e=>{if(e.dead)return;e.attackCd=Math.max(0,e.attackCd-dt);e.hurt=Math.max(0,e.hurt-dt);let d=P.x-e.x;if(e.type==="boss"){bossActive=true;if(difficulty==="fractured"){let q=e.hp/e.maxHp;e.phase=q>.66?1:q>.33?2:3}else e.phase=e.hp/e.maxHp>.5?1:2;e.dir=Math.sign(d)||-1;if(Math.abs(d)>115)e.vx=e.dir*[0,110,155,210][e.phase];else e.vx*=.8;if(e.attackCd<=0&&Math.abs(d)<180){e.attackCd=[0,1.5,1.05,.72][e.phase];let reach=e.phase===3?210:150,h={x:e.dir>0?e.x+e.w:e.x-reach,y:e.y+25,w:reach,h:80};if(overlap(h,P))damage(14+e.phase*5,e.x);burst(e.x+45,e.y+50,e.phase===3?"#bf88ff":"#855fae",12+e.phase*3)}}else if(Math.abs(d)<520){e.dir=Math.sign(d)||e.dir;e.vx=e.dir*85;if(Math.abs(d)<55&&e.attackCd<=0){e.attackCd=1.1;damage(e.damage,e.x)}}else e.vx*=.8;e.vy+=1700*dt;collision(e,dt)})}
+function updateParticles(dt){for(let i=particles.length-1;i>=0;i--){let p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=550*dt}}
+function bg(){let g=c.createLinearGradient(0,0,0,540);g.addColorStop(0,"#111827");g.addColorStop(1,"#17261f");c.fillStyle=g;c.fillRect(0,0,960,540);for(let L=0;L<3;L++){let sp=[.12,.25,.45][L],base=320+L*45;c.fillStyle=["#151d25","#18251f","#1b2d25"][L];for(let x=-200-(cam*sp)%220;x<1100;x+=220){c.beginPath();c.moveTo(x,base+130);c.lineTo(x+90,base-110-L*30);c.lineTo(x+150,base+130);c.fill()}}}
+function drawPlayer(){if(P.inv>0&&Math.floor(P.inv*12)%2===0)return;c.save();c.translate(P.x+17,P.y+31);c.scale(P.facing,1);c.translate(-17,-31);c.fillStyle="#07090d";c.fillRect(3,15,29,47);c.fillStyle="#202631";c.fillRect(8,18,20,32);c.fillStyle="#535d6b";c.fillRect(21,17,13,15);c.fillStyle="#a66f57";c.fillRect(10,10,14,13);c.fillStyle="#08090d";c.fillRect(7,2,22,12);c.fillRect(9,9,7,16);c.fillStyle="#e4f3ff";c.fillRect(16,14,3,2);c.fillRect(23,14,2,2);c.fillStyle="#5aa9ff";c.fillRect(15,14,1,2);c.fillRect(25,14,1,2);c.fillStyle="#a98245";c.fillRect(8,43,22,3);c.fillStyle="#111722";c.fillRect(8,47,7,15);c.fillRect(22,47,7,15);if(P.attack>0){c.strokeStyle="#d7e6f2";c.lineWidth=5;c.beginPath();c.arc(28,28,38,-1.1,.75);c.stroke();c.strokeStyle="#68adff";c.lineWidth=2;c.stroke()}else{c.strokeStyle="#c6d4df";c.lineWidth=4;c.beginPath();c.moveTo(27,34);c.lineTo(48,18);c.stroke()}c.restore()}
+function drawEnemy(e){if(e.hurt>0)c.globalAlpha=.5;if(e.type==="boss"){c.fillStyle="#0d0a13";c.fillRect(e.x,e.y,e.w,e.h);c.fillStyle="#392d49";c.fillRect(e.x+12,e.y+18,e.w-24,e.h-24);c.fillStyle=e.phase===3?"#c28cff":"#8f6cc3";c.fillRect(e.x+18,e.y+28,12,5);c.fillRect(e.x+60,e.y+28,12,5);c.strokeStyle="#b8a1d3";c.lineWidth=8;c.beginPath();c.moveTo(e.x+75,e.y+75);c.lineTo(e.x+145,e.y+30);c.stroke()}else{c.fillStyle="#12161c";c.fillRect(e.x,e.y,e.w,e.h);c.fillStyle="#39434b";c.fillRect(e.x+5,e.y+15,e.w-10,30);c.fillStyle="#cf384e";c.fillRect(e.x+9,e.y+10,5,2);c.fillRect(e.x+21,e.y+10,5,2)}c.globalAlpha=1}
+function draw(){bg();c.save();c.translate(-cam,0);platforms.forEach(p=>{c.fillStyle="#28362f";c.fillRect(p.x,p.y,p.w,p.h);c.fillStyle="#4b6654";c.fillRect(p.x,p.y,p.w,7)});cps.forEach((x,i)=>{c.fillStyle=i<=checkpoint?"#6cb8ff":"#4d5360";c.fillRect(x+10,345,5,48)});enemies.forEach(e=>{if(!e.dead)drawEnemy(e)});drawPlayer();particles.forEach(p=>{c.globalAlpha=Math.max(0,p.life*2);c.fillStyle=p.col;c.fillRect(p.x,p.y,4,4)});c.globalAlpha=1;c.restore();if(victory){c.fillStyle="rgba(4,6,10,.72)";c.fillRect(0,0,960,540);c.textAlign="center";c.fillStyle="#eef4ff";c.font="bold 42px Georgia";c.fillText("IL BOSCO È SOPRAVVISSUTO",480,245)}}
+function hud(){ui.hpBar.style.width=Math.max(0,P.hp/P.maxHp*100)+"%";ui.hpText.textContent=Math.ceil(P.hp)+"/"+P.maxHp;ui.stBar.style.width=P.st/P.maxSt*100+"%";ui.stText.textContent=Math.ceil(P.st)+"/"+P.maxSt;ui.souls.textContent=souls;ui.deaths.textContent=deaths;let b=enemies.find(e=>e.type==="boss"&&!e.dead);if(b&&bossActive){ui.bossBar.style.width=b.hp/b.maxHp*100+"%";ui.bossPhase.textContent="Fase "+b.phase+"/"+(difficulty==="fractured"?3:2)}else{ui.bossBar.style.width="0%";ui.bossPhase.textContent="—"}}
+function loop(t){let dt=Math.min(.033,(t-last)/1000||0);last=t;if(state==="play"){updatePlayer(dt);updateEnemies(dt);updateParticles(dt);hud()}draw();requestAnimationFrame(loop)}
+function press(k){keys.add(k);if(k==="Space")P.jumpBuf=.12;if(k==="KeyJ")attack();if(k==="KeyK")dodge();if(k==="KeyP"){if(state==="play"){state="pause";ui.pause.classList.add("show")}else if(state==="pause"){state="play";ui.pause.classList.remove("show")}}}
+addEventListener("keydown",e=>{if(["Space","ArrowLeft","ArrowRight"].includes(e.code))e.preventDefault();press(e.code)});
+addEventListener("keyup",e=>keys.delete(e.code));
+document.querySelectorAll(".mobile button").forEach(b=>{let k=b.dataset.key;b.addEventListener("pointerdown",e=>{e.preventDefault();b.setPointerCapture(e.pointerId);press(k)});b.addEventListener("pointerup",()=>keys.delete(k));b.addEventListener("pointercancel",()=>keys.delete(k))});
+$("start").onclick=()=>start(false);$("continue").onclick=()=>start(true);$("resume").onclick=()=>{state="play";ui.pause.classList.remove("show")};$("backMenu").onclick=()=>{save();state="menu";ui.pause.classList.remove("show");ui.menu.classList.add("show")};
+ui.cont.disabled=!localStorage.getItem("eclipseV2");load();fragment();resetEnemies();hud();requestAnimationFrame(loop);
+})();
