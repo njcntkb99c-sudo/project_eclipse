@@ -1,0 +1,6 @@
+{
+  "kael": "assets/player/kael-sheet.png",
+  "soldier": "assets/enemies/corrupted-soldier.png",
+  "boss": "assets/enemies/warden-3-phases.png",
+  "tileset": "assets/tiles/bosco-tileset.png"
+}
